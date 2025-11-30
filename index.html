@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>💖 Our Love Garden 💐</title>
+    
+    <!-- iOS Web App Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Love Garden">
+    <!-- Using a cute flower icon for the home screen -->
+    <link rel="apple-touch-icon" href="https://img.icons8.com/fluency/192/cherry-blossom.png">
+
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Smooth fade animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+
+        /* Card styling - Dynamic variables for themes */
+        :root {
+            --bg-gradient-from: #fff5f7;
+            --bg-gradient-to: #fff0f5;
+            --accent-color: #ec4899; /* pink-500 */
+        }
+
+        /* Theme Classes */
+        body.theme-day { background-color: #fdf2f8; }
+        body.theme-night { background-color: #1e1b4b; color: #e2e8f0; }
+        body.theme-sunset { background-color: #4c0519; color: #fff1f2; }
+
+        .flower-card {
+            background: linear-gradient(135deg, var(--bg-gradient-from) 0%, var(--bg-gradient-to) 100%);
+            box-shadow: 0 10px 25px -5px rgba(0,0,0, 0.1), 0 8px 10px -6px rgba(0,0,0, 0.1);
+            transition: all 0.5s ease;
+        }
+        
+        /* Specific Theme Overrides */
+        .theme-night .flower-card { --bg-gradient-from: #312e81; --bg-gradient-to: #1e1b4b; border-color: #4338ca; color: white; }
+        .theme-night .text-gray-800 { color: #e2e8f0; }
+        .theme-night .text-gray-600 { color: #cbd5e1; }
+        .theme-night .bg-white { background-color: #312e81; color: white; border-color: #4338ca; }
+        .theme-night .bg-gray-50 { background-color: #3730a3; color: white; border-color: #4338ca; }
+        .theme-night .text-pink-600 { color: #f472b6; } 
+
+        .theme-sunset .flower-card { --bg-gradient-from: #881337; --bg-gradient-to: #4c0519; border-color: #9f1239; color: white; }
+        .theme-sunset .text-gray-800 { color: #ffe4e6; }
+        .theme-sunset .text-gray-600 { color: #fecdd3; }
+        .theme-sunset .bg-white { background-color: #9f1239; color: white; border-color: #be123c; }
+        .theme-sunset .bg-gray-50 { background-color: #881337; color: white; border-color: #be123c; }
+
+
+        /* Interactive Element Styles */
+        .interactive-input { transition: all 0.2s; }
+        .interactive-input:focus { transform: scale(1.01); }
+        
+        .action-button { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+        .action-button:active { transform: scale(0.95); }
+        
+        /* Floating flower animation */
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-5px); }
+            100% { transform: translateY(0px); }
+        }
+        .float-hover:hover .flower-icon {
+            animation: float 2s ease-in-out infinite;
+            display: inline-block;
+        }
+
+        /* Locked/Unlocked Item Styles */
+        .garden-item { transition: all 0.3s ease; }
+        .garden-item.locked { filter: grayscale(100%) opacity(0.4); transform: scale(0.9); }
+        .garden-item.unlocked { filter: grayscale(0%) opacity(1); transform: scale(1.1); text-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        
+        /* Shiny Effect */
+        @keyframes sparkle {
+            0% { opacity: 0; transform: scale(0.5) rotate(0deg); }
+            50% { opacity: 1; transform: scale(1.2) rotate(180deg); }
+            100% { opacity: 0; transform: scale(0.5) rotate(360deg); }
+        }
+        .shiny-sparkle::after {
+            content: '✨';
+            position: absolute;
+            top: -10px; right: -10px;
+            font-size: 1rem;
+            animation: sparkle 1.5s infinite;
+        }
+
+        /* Progress Bar Strip */
+        .progress-strip {
+            background-size: 20px 20px;
+            background-image: linear-gradient(
+                45deg, 
+                rgba(255, 255, 255, .15) 25%, 
+                transparent 25%, 
+                transparent 50%, 
+                rgba(255, 255, 255, .15) 50%, 
+                rgba(255, 255, 255, .15) 75%, 
+                transparent 75%, 
+                transparent
+            );
+            animation: move-stripes 1s linear infinite;
+        }
+        @keyframes move-stripes {
+            0% { background-position: 0 0; }
+            100% { background-position: 20px 20px; }
+        }
+
+        /* Level Up Animation */
+        @keyframes pop-scale {
+            0% { transform: scale(0.5); opacity: 0; }
+            50% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .level-up-modal {
+            animation: pop-scale 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        
+        /* Confetti Canvas */
+        #confetti-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 60;
+        }
+
+        /* Tabs */
+        .tab-btn.active {
+            background-color: rgba(255, 255, 255, 0.5);
+            font-weight: bold;
+            border-bottom: 2px solid var(--accent-color);
+        }
+        .theme-night .tab-btn.active {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Decoration Placement */
+        .scene-container {
+            min-height: 80px;
+            position: relative;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .scene-item {
+            font-size: 2.5rem;
+            animation: pop-scale 0.5s ease-out backwards;
+        }
+    </style>
+</head>
+<body class="theme-day min-h-screen font-sans text-gray-800 flex items-center justify-center p-4 transition-colors duration-500">
+
+    <!-- Main Container -->
+    <main class="w-full max-w-lg flower-card rounded-3xl border border-pink-100 overflow-hidden relative">
+        
+        <!-- Decoration Circles -->
+        <div class="absolute top-0 right-0 -mr-16 -mt-16 w-32 h-32 bg-pink-100 rounded-full opacity-50 blur-2xl pointer-events-none mix-blend-multiply"></div>
+        <div class="absolute bottom-0 left-0 -ml-16 -mb-16 w-32 h-32 bg-yellow-100 rounded-full opacity-50 blur-2xl pointer-events-none mix-blend-multiply"></div>
+        
+        <!-- Confetti Canvas -->
+        <canvas id="confetti-canvas"></canvas>
+
+        <div class="relative p-6 sm:p-8 z-10">
+            <!-- Header & Theme Selector -->
+            <div class="flex justify-between items-start mb-4">
+                <div class="text-left">
+                    <h1 class="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-rose-600 mb-1">
+                        Love Garden
+                    </h1>
+                    <p class="text-pink-400 text-xs font-bold uppercase tracking-widest">Co-op Collection Game</p>
+                </div>
+                <div class="flex flex-col gap-2 items-end">
+                    <select id="theme-selector" onchange="changeTheme(this.value)" class="text-xs border border-pink-200 rounded-lg p-1 bg-white/50 focus:outline-none text-pink-600 font-bold">
+                        <option value="theme-day">☀️ Day</option>
+                        <option value="theme-night">🌙 Night</option>
+                        <option value="theme-sunset">🌅 Sunset</option>
+                    </select>
+                    <!-- Log Out Button (Hidden until connected) -->
+                    <button id="logout-btn" onclick="handleLogout()" class="hidden text-[10px] text-gray-400 hover:text-red-500 underline">Log Out</button>
+                </div>
+            </div>
+
+            <!-- VIEW 1: Auth Screen (Login/Signup) -->
+            <div id="view-auth" class="hidden animate-fade-in text-center py-6">
+                <div id="auth-form-container" class="bg-white/60 backdrop-blur-sm rounded-2xl p-6 border border-pink-100 shadow-sm">
+                    <h2 id="auth-title" class="text-xl font-bold text-pink-600 mb-4">Welcome Back</h2>
+                    
+                    <input type="email" id="auth-email" placeholder="Email" class="w-full p-3 mb-3 rounded-xl border border-pink-200 bg-white/80 focus:ring-2 focus:ring-pink-300 outline-none text-sm">
+                    <input type="password" id="auth-password" placeholder="Password" class="w-full p-3 mb-4 rounded-xl border border-pink-200 bg-white/80 focus:ring-2 focus:ring-pink-300 outline-none text-sm">
+                    
+                    <button id="auth-action-btn" onclick="handleAuthAction()" class="w-full py-3 bg-pink-500 text-white rounded-xl font-bold hover:bg-pink-600 transition shadow-md mb-4">
+                        Log In
+                    </button>
+                    
+                    <p class="text-xs text-gray-500">
+                        <span id="auth-toggle-text">New here?</span> 
+                        <button onclick="toggleAuthMode()" class="text-pink-600 font-bold underline ml-1" id="auth-toggle-btn">Create Account</button>
+                    </p>
+                    <div id="auth-error" class="hidden mt-3 text-xs text-red-500 bg-red-50 p-2 rounded"></div>
+                </div>
+                <p class="text-[10px] text-gray-400 mt-6 max-w-xs mx-auto">
+                    Note: You must enable "Email/Password" in your Firebase Console for this to work.
+                </p>
+            </div>
+
+            <!-- VIEW 2: App Interface (Hidden by default) -->
+            <div id="view-app" class="hidden animate-fade-in">
+                
+                <!-- Section: My ID -->
+                <div class="bg-white/60 backdrop-blur-sm rounded-2xl p-4 mb-6 border border-pink-100 shadow-sm">
+                    <div class="flex justify-between items-center mb-2">
+                         <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider">My Player ID</label>
+                         <span class="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold uppercase hidden" id="status-badge">Online</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <div class="relative flex-grow">
+                            <input type="text" id="my-id" readonly 
+                                class="w-full bg-gray-50 text-gray-600 text-sm font-mono p-3 rounded-xl border border-gray-200 outline-none select-all"
+                                value="...">
+                        </div>
+                        <button onclick="copyMyId()" class="bg-gray-100 hover:bg-gray-200 text-gray-600 px-4 rounded-xl font-medium text-sm transition action-button">
+                            Copy
+                        </button>
+                    </div>
+                    <p id="copy-feedback" class="text-green-500 text-xs mt-2 hidden text-center font-medium">Copied to clipboard!</p>
+                </div>
+
+                <!-- Section: Partner Connection -->
+                <div id="connection-section" class="mb-8">
+                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Partner's ID</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="partner-id-input" placeholder="Paste their ID here" 
+                            class="interactive-input w-full bg-white text-gray-800 text-sm p-3 rounded-xl border border-pink-200 focus:border-pink-400 focus:ring-2 focus:ring-pink-100 outline-none shadow-sm placeholder-gray-300">
+                        <button onclick="connectToPartner()" class="bg-pink-500 hover:bg-pink-600 text-white px-6 rounded-xl font-bold shadow-lg shadow-pink-200 transition action-button">
+                            Start Game
+                        </button>
+                    </div>
+                    <button id="disconnect-btn" onclick="disconnectPartner()" class="hidden mt-2 text-xs text-gray-400 hover:text-red-500 underline w-full text-center">Change Partner ID</button>
+                </div>
+
+                <!-- GAME CONTAINER (Hidden until connected) -->
+                <div id="game-container" class="hidden">
+
+                    <!-- Stats Bar -->
+                    <div class="flex justify-between items-center mb-4 px-2">
+                        <div class="text-sm font-bold text-gray-600">
+                            Flowers: <span id="counter" class="text-pink-600">0</span>
+                        </div>
+                        <div class="text-sm font-bold text-gray-600">
+                            Petals: <span id="petals-count" class="text-yellow-600">0</span> 🪙
+                        </div>
+                    </div>
+
+                    <!-- Navigation Tabs -->
+                    <div class="flex border-b border-pink-200 mb-4">
+                        <button onclick="switchTab('garden')" id="tab-garden" class="tab-btn active flex-1 py-2 text-sm text-gray-600 hover:text-pink-600 transition">Garden</button>
+                        <button onclick="switchTab('shop')" id="tab-shop" class="tab-btn flex-1 py-2 text-sm text-gray-600 hover:text-pink-600 transition">Shop</button>
+                        <button onclick="switchTab('daily')" id="tab-daily" class="tab-btn flex-1 py-2 text-sm text-gray-600 hover:text-pink-600 transition">Daily Q</button>
+                    </div>
+
+                    <!-- TAB: GARDEN -->
+                    <div id="view-garden" class="animate-fade-in">
+                        
+                        <!-- Progress & Water -->
+                        <div class="mb-4 flex items-end gap-3">
+                            <div class="flex-grow">
+                                <div class="flex justify-between text-xs font-bold text-gray-500 mb-1">
+                                    <span>Level <span id="current-level">1</span></span>
+                                    <span id="next-unlock-text">Next: Rose</span>
+                                </div>
+                                <div class="h-4 w-full bg-gray-200 rounded-full overflow-hidden relative">
+                                    <div id="progress-bar" class="h-full bg-gradient-to-r from-pink-400 to-rose-500 progress-strip transition-all duration-500" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <!-- Watering Can Button -->
+                            <div class="flex flex-col items-center">
+                                <button id="water-btn" onclick="waterGarden()" class="w-10 h-10 rounded-full bg-blue-100 text-blue-500 flex items-center justify-center hover:bg-blue-200 transition disabled:opacity-50 disabled:cursor-not-allowed relative" title="Water for +10 flowers!">
+                                    💧
+                                    <span id="water-badge" class="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-ping hidden"></span>
+                                </button>
+                                <span class="text-[9px] text-gray-400 mt-1">Water</span>
+                            </div>
+                        </div>
+
+                        <!-- Decoration Scene (Above the grid) -->
+                        <div id="scene-display" class="scene-container border-b border-pink-100 pb-2 mb-2">
+                            <!-- Decorations appear here -->
+                        </div>
+
+                        <!-- The Flower Grid -->
+                        <div class="bg-white/50 backdrop-blur-sm rounded-2xl p-4 border border-pink-100 shadow-inner mb-6">
+                            <div id="garden-grid" class="flex flex-wrap justify-center gap-4 text-3xl">
+                                <!-- Items injected by JS -->
+                            </div>
+                        </div>
+
+                        <!-- Status & Note Display -->
+                        <div id="status-display" class="min-h-[4rem] flex flex-col items-center justify-center text-center mb-4 p-2 bg-white/30 rounded-xl border border-pink-50">
+                            <span class="text-gray-500 text-sm">Tap below to grow the garden!</span>
+                        </div>
+
+                        <!-- Controls: Note & Button -->
+                        <div class="flex flex-col gap-3">
+                            <input type="text" id="love-note" placeholder="Attach a message... (Optional)" maxlength="40" 
+                                class="w-full bg-white/80 text-gray-700 text-sm p-3 rounded-xl border border-pink-100 focus:border-pink-300 outline-none text-center">
+                            
+                            <button onclick="sendFlower()" class="w-full py-4 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-2xl font-bold text-lg shadow-xl shadow-pink-200 hover:shadow-pink-300 transform transition hover:-translate-y-1 float-hover active:scale-95 flex items-center justify-center gap-2">
+                                <span class="flower-icon">✨</span> Plant Flower
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- TAB: SHOP -->
+                    <div id="view-shop" class="hidden animate-fade-in">
+                        <div class="text-center mb-4">
+                            <h3 class="text-lg font-bold text-gray-700">Garden Decor Shop</h3>
+                            <p class="text-xs text-gray-500">Spend petals to beautify your shared space!</p>
+                        </div>
+                        <div id="shop-grid" class="grid grid-cols-2 gap-4">
+                            <!-- Shop items injected here -->
+                        </div>
+                    </div>
+
+                    <!-- TAB: DAILY Q -->
+                    <div id="view-daily" class="hidden animate-fade-in">
+                        <div class="bg-white/60 p-6 rounded-2xl border border-pink-200 shadow-sm text-center">
+                            <div class="inline-block bg-pink-100 text-pink-600 px-3 py-1 rounded-full text-xs font-bold mb-4">
+                                Daily Connection
+                            </div>
+                            <h3 id="daily-question-text" class="text-lg font-bold text-gray-800 mb-6 italic">
+                                Loading question...
+                            </h3>
+                            
+                            <!-- Input Area -->
+                            <div id="daily-input-area">
+                                <textarea id="daily-answer-input" rows="3" placeholder="Type your answer here..." class="w-full p-3 rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-pink-300 outline-none mb-4"></textarea>
+                                <button onclick="submitDailyAnswer()" class="w-full py-3 bg-pink-500 text-white rounded-xl font-bold hover:bg-pink-600 transition">
+                                    Submit Answer
+                                </button>
+                            </div>
+
+                            <!-- Waiting / Result Area -->
+                            <div id="daily-result-area" class="hidden mt-4">
+                                <div id="daily-status-msg" class="text-sm font-bold text-gray-600 mb-4"></div>
+                                <div id="partner-answer-display" class="hidden bg-yellow-50 p-4 rounded-xl border border-yellow-200 text-left">
+                                    <p class="text-xs text-gray-400 uppercase font-bold mb-1">Partner's Answer:</p>
+                                    <p id="partner-answer-text" class="text-gray-800 italic">...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- Error Display -->
+            <div id="error-banner" class="hidden mt-6 bg-red-50 border border-red-100 text-red-500 p-4 rounded-xl text-sm text-center"></div>
+
+            <!-- Level Up Modal (Overlay) -->
+            <div id="levelup-overlay" class="hidden absolute inset-0 bg-white/90 z-50 flex flex-col items-center justify-center text-center p-8 backdrop-blur-sm level-up-modal">
+                <div class="text-6xl mb-4 animate-bounce" id="levelup-icon">🎁</div>
+                <h2 class="text-2xl font-extrabold text-pink-600 mb-2">New Flower Unlocked!</h2>
+                <p class="text-gray-600 mb-6">You and your partner discovered the <span id="levelup-name" class="font-bold">Rose</span>!</p>
+                <button onclick="closeLevelUp()" class="bg-pink-500 text-white px-8 py-3 rounded-full font-bold shadow-lg hover:bg-pink-600 transition">Awesome!</button>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- FIREBASE SETUP -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        // Import Email/Password Auth Providers
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, onSnapshot, setDoc, getDoc, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // ==========================================
+        // --- CONFIGURATION START ---
+        // ==========================================
+        
+        // This is your specific configuration:
+        const manualConfig = {
+            apiKey: "AIzaSyBEA9tEwiCr__ohGhTqEZ7dbfmjgRMh1D8",
+            authDomain: "flower-exchange-423b6.firebaseapp.com",
+            projectId: "flower-exchange-423b6",
+            storageBucket: "flower-exchange-423b6.firebasestorage.app",
+            messagingSenderId: "312133979500",
+            appId: "1:312133979500:web:0f70ff976e7b9a1c59b749"
+        };
+
+        // ==========================================
+        // --- CONFIGURATION END ---
+        // ==========================================
+
+        let firebaseConfig;
+        let collectionPath;
+
+        if (typeof __firebase_config !== 'undefined') {
+            firebaseConfig = JSON.parse(__firebase_config);
+            collectionPath = `artifacts/${__app_id}/public/data/flower_exchanges`;
+        } else {
+            firebaseConfig = manualConfig;
+            collectionPath = "flower_exchanges"; 
+        }
+
+        // --- APP STATE ---
+        let db;
+        let auth;
+        let myId = null;
+        let partnerId = null;
+        let unsubscribeListener = null;
+        let localCount = 0; 
+        let petals = 0;
+        let inventory = [];
+        let isSignupMode = false;
+
+        // --- GAME DATA ---
+        const GAME_LEVELS = [
+            { count: 0,   emoji: '🌸', name: 'Cherry Blossom' },
+            { count: 10,  emoji: '🌹', name: 'Red Rose' },
+            { count: 25,  emoji: '🌻', name: 'Sunflower' },
+            { count: 50,  emoji: '🌷', name: 'Tulip' },
+            { count: 75,  emoji: '🌺', name: 'Hibiscus' },
+            { count: 100, emoji: '💐', name: 'Grand Bouquet' },
+            { count: 150, emoji: '🪴', name: 'Potted Plant' },
+            { count: 200, emoji: '🐝', name: 'Garden Bee' },
+            { count: 300, emoji: '💖', name: 'Pure Love' },
+            { count: 500, emoji: '💎', name: 'Diamond' },
+            { count: 1000, emoji: '👑', name: 'Royal Crown' }
+        ];
+
+        const SHOP_ITEMS = [
+            { id: 'bench', name: 'Park Bench', icon: '🪑', price: 50 },
+            { id: 'fountain', name: 'Fountain', icon: '⛲', price: 100 },
+            { id: 'bird', name: 'Bluebird', icon: '🐦', price: 30 },
+            { id: 'tree', name: 'Oak Tree', icon: '🌳', price: 75 },
+            { id: 'cottage', name: 'Cozy Cottage', icon: '🏠', price: 300 },
+            { id: 'cat', name: 'Garden Cat', icon: '🐈', price: 60 },
+            { id: 'lamp', name: 'Street Lamp', icon: '🏮', price: 40 },
+            { id: 'rainbow', name: 'Rainbow', icon: '🌈', price: 150 }
+        ];
+
+        const DAILY_QUESTIONS = [
+            "What was the highlight of your day?",
+            "What is your favorite memory of us?",
+            "What is one thing you are grateful for today?",
+            "What movie do you want to watch next?",
+            "What is your dream vacation spot?",
+            "What is a meal you'd love to eat right now?",
+            "If we could teleport anywhere, where would we go?",
+            "What is something I do that makes you smile?",
+            "What is your favorite song right now?",
+            "Describe our relationship in one word."
+        ];
+
+        // UI References
+        const viewAuth = document.getElementById('view-auth');
+        const viewApp = document.getElementById('view-app');
+        const gameContainer = document.getElementById('game-container');
+        const myIdInput = document.getElementById('my-id');
+        const connectionSection = document.getElementById('connection-section');
+        const statusDisplay = document.getElementById('status-display');
+        const counterDisplay = document.getElementById('counter');
+        const petalsDisplay = document.getElementById('petals-count');
+        const errorBanner = document.getElementById('error-banner');
+        const noteInput = document.getElementById('love-note');
+        const waterBtn = document.getElementById('water-btn');
+        const waterBadge = document.getElementById('water-badge');
+        const disconnectBtn = document.getElementById('disconnect-btn');
+        const logoutBtn = document.getElementById('logout-btn');
+        const themeSelector = document.getElementById('theme-selector');
+        
+        // Auth UI Refs
+        const authTitle = document.getElementById('auth-title');
+        const authActionBtn = document.getElementById('auth-action-btn');
+        const authToggleText = document.getElementById('auth-toggle-text');
+        const authToggleBtn = document.getElementById('auth-toggle-btn');
+        const authError = document.getElementById('auth-error');
+        
+        // Game UI Refs
+        const progressBar = document.getElementById('progress-bar');
+        const currentLevelSpan = document.getElementById('current-level');
+        const nextUnlockText = document.getElementById('next-unlock-text');
+        const gardenGrid = document.getElementById('garden-grid');
+        const sceneDisplay = document.getElementById('scene-display');
+        const shopGrid = document.getElementById('shop-grid');
+        const levelUpOverlay = document.getElementById('levelup-overlay');
+        const levelUpIcon = document.getElementById('levelup-icon');
+        const levelUpName = document.getElementById('levelup-name');
+        
+        // Daily Q UI Refs
+        const dailyQuestionText = document.getElementById('daily-question-text');
+        const dailyInputArea = document.getElementById('daily-input-area');
+        const dailyAnswerInput = document.getElementById('daily-answer-input');
+        const dailyResultArea = document.getElementById('daily-result-area');
+        const dailyStatusMsg = document.getElementById('daily-status-msg');
+        const partnerAnswerDisplay = document.getElementById('partner-answer-display');
+        const partnerAnswerText = document.getElementById('partner-answer-text');
+
+        // --- CONFETTI ENGINE ---
+        const canvas = document.getElementById('confetti-canvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+        let animationId;
+
+        function resizeCanvas() {
+            canvas.width = canvas.parentElement.offsetWidth;
+            canvas.height = canvas.parentElement.offsetHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+
+        class Particle {
+            constructor() {
+                this.x = canvas.width / 2;
+                this.y = canvas.height / 2;
+                this.vx = (Math.random() - 0.5) * 10;
+                this.vy = (Math.random() - 0.5) * 10;
+                this.size = Math.random() * 5 + 2;
+                this.color = `hsl(${Math.random() * 360}, 100%, 50%)`;
+                this.life = 100;
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vy += 0.2; // Gravity
+                this.life--;
+            }
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function startConfetti() {
+            resizeCanvas();
+            particles = [];
+            for (let i = 0; i < 100; i++) particles.push(new Particle());
+            if (animationId) cancelAnimationFrame(animationId);
+            animateConfetti();
+        }
+
+        function animateConfetti() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles.forEach((p, index) => {
+                p.update();
+                p.draw();
+                if (p.life <= 0) particles.splice(index, 1);
+            });
+            if (particles.length > 0) {
+                animationId = requestAnimationFrame(animateConfetti);
+            }
+        }
+
+        // --- SOUND ENGINE (Web Audio API) ---
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        function playTone(freq, type, duration, delay = 0) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime + delay);
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime + delay);
+            gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + delay + duration);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(audioCtx.currentTime + delay);
+            osc.stop(audioCtx.currentTime + delay + duration);
+        }
+
+        function playSound(type) {
+            if (type === 'send') {
+                playTone(440, 'sine', 0.5); // A4
+                playTone(554, 'sine', 0.5, 0.1); // C#5
+            } else if (type === 'receive') {
+                playTone(554, 'sine', 0.6); // C#5
+                playTone(659, 'sine', 0.6, 0.15); // E5
+            } else if (type === 'water') {
+                playTone(300, 'triangle', 0.3);
+                playTone(400, 'triangle', 0.3, 0.1);
+                playTone(500, 'triangle', 0.4, 0.2);
+            } else if (type === 'shiny') {
+                playTone(880, 'sine', 0.8, 0.0);
+                playTone(1108, 'sine', 0.8, 0.1);
+                playTone(1318, 'sine', 1.0, 0.2);
+            } else if (type === 'levelup') {
+                playTone(523, 'sine', 0.2, 0);
+                playTone(659, 'sine', 0.2, 0.1);
+                playTone(783, 'sine', 0.2, 0.2);
+                playTone(1046, 'sine', 0.6, 0.3);
+            } else if (type === 'buy') {
+                playTone(600, 'square', 0.1);
+                playTone(800, 'square', 0.1, 0.1);
+            }
+        }
+
+        // --- INITIALIZATION ---
+        async function init() {
+            try {
+                // Restore theme
+                const savedTheme = localStorage.getItem('love_garden_theme');
+                if (savedTheme) {
+                    changeTheme(savedTheme);
+                    themeSelector.value = savedTheme;
+                }
+
+                const app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+
+                // Note: We do NOT auto-sign-in anymore. 
+                // We wait for auth state. If none, we show Login screen.
+
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        // Logged In
+                        myId = user.uid;
+                        myIdInput.value = myId;
+                        viewAuth.classList.add('hidden');
+                        viewApp.classList.remove('hidden');
+                        document.getElementById('status-badge').classList.remove('hidden');
+                        logoutBtn.classList.remove('hidden');
+                    } else {
+                        // Not Logged In
+                        viewApp.classList.add('hidden');
+                        viewAuth.classList.remove('hidden');
+                        logoutBtn.classList.add('hidden');
+                    }
+                });
+
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        // --- AUTH LOGIC ---
+        
+        window.toggleAuthMode = function() {
+            isSignupMode = !isSignupMode;
+            if (isSignupMode) {
+                authTitle.innerText = "Join the Garden";
+                authActionBtn.innerText = "Sign Up";
+                authToggleText.innerText = "Have an account?";
+                authToggleBtn.innerText = "Log In";
+            } else {
+                authTitle.innerText = "Welcome Back";
+                authActionBtn.innerText = "Log In";
+                authToggleText.innerText = "New here?";
+                authToggleBtn.innerText = "Create Account";
+            }
+            authError.classList.add('hidden');
+        }
+
+        window.handleAuthAction = async function() {
+            const email = document.getElementById('auth-email').value;
+            const password = document.getElementById('auth-password').value;
+            authError.classList.add('hidden');
+
+            if (!email || !password) {
+                authError.innerText = "Please fill in all fields.";
+                authError.classList.remove('hidden');
+                return;
+            }
+
+            try {
+                if (isSignupMode) {
+                    await createUserWithEmailAndPassword(auth, email, password);
+                } else {
+                    await signInWithEmailAndPassword(auth, email, password);
+                }
+            } catch (error) {
+                let msg = error.message;
+                if (error.code === 'auth/invalid-email') msg = "Invalid email address.";
+                if (error.code === 'auth/wrong-password') msg = "Incorrect password.";
+                if (error.code === 'auth/user-not-found') msg = "User not found.";
+                if (error.code === 'auth/email-already-in-use') msg = "Email already in use.";
+                if (error.code === 'auth/operation-not-allowed') msg = "Email/Password sign-in is not enabled in Firebase Console.";
+                
+                authError.innerText = msg;
+                authError.classList.remove('hidden');
+            }
+        }
+
+        window.handleLogout = async function() {
+            await signOut(auth);
+            // State resets automatically via onAuthStateChanged
+            disconnectPartner(); // Reset local game state
+        }
+
+
+        // --- CORE FUNCTIONS ---
+        
+        window.changeTheme = function(theme) {
+            document.body.className = `${theme} min-h-screen font-sans text-gray-800 flex items-center justify-center p-4 transition-colors duration-500`;
+            localStorage.setItem('love_garden_theme', theme);
+        }
+        
+        window.switchTab = function(tabName) {
+            // UI Toggle
+            ['garden', 'shop', 'daily'].forEach(t => {
+                document.getElementById(`view-${t}`).classList.add('hidden');
+                document.getElementById(`tab-${t}`).classList.remove('active');
+            });
+            document.getElementById(`view-${tabName}`).classList.remove('hidden');
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+            
+            if (tabName === 'shop') renderShop();
+            if (tabName === 'daily') loadDailyQuestion();
+        }
+
+        window.connectToPartner = function() {
+            const input = document.getElementById('partner-id-input').value.trim();
+            if (!input) return showError("Please enter an ID.");
+            if (input === myId) return showError("You cannot connect to yourself!");
+
+            partnerId = input;
+            
+            connectionSection.classList.add('hidden');
+            gameContainer.classList.remove('hidden');
+            disconnectBtn.classList.remove('hidden');
+
+            renderGarden(0);
+            setupRealtimeListener();
+        };
+        
+        window.disconnectPartner = function() {
+            if (unsubscribeListener) unsubscribeListener();
+            partnerId = null;
+            document.getElementById('partner-id-input').value = "";
+            
+            gameContainer.classList.add('hidden');
+            connectionSection.classList.remove('hidden');
+            disconnectBtn.classList.add('hidden');
+            statusDisplay.innerHTML = "";
+            localCount = 0;
+            counterDisplay.innerText = "0";
+            petals = 0;
+            petalsDisplay.innerText = "0";
+            
+            renderGarden(0);
+            progressBar.style.width = "0%";
+            sceneDisplay.innerHTML = "";
+        }
+
+        function setupRealtimeListener() {
+            if (unsubscribeListener) unsubscribeListener();
+
+            const pairId = [myId, partnerId].sort().join('_');
+            const docRef = doc(db, collectionPath, pairId);
+
+            unsubscribeListener = onSnapshot(docRef, (snapshot) => {
+                if (snapshot.exists()) {
+                    const data = snapshot.data();
+                    updateUI(data);
+                    checkWaterStatus(data.lastWatered);
+                    
+                    // Daily Question Check
+                    if (document.getElementById('view-daily').classList.contains('hidden') === false) {
+                        loadDailyQuestion(data);
+                    }
+                } else {
+                    statusDisplay.innerHTML = `<span class="text-pink-400">Ready! Plant the first seed...</span>`;
+                    checkWaterStatus(0);
+                }
+            }, (err) => {
+                console.error(err);
+                if (err.code === 'permission-denied') {
+                    showError("Permission denied. Check Firestore rules.");
+                } else {
+                    showError("Connection lost.");
+                }
+            });
+        }
+
+        // --- SHOP LOGIC ---
+        function renderShop() {
+            shopGrid.innerHTML = '';
+            SHOP_ITEMS.forEach(item => {
+                const isOwned = inventory.includes(item.id);
+                const canAfford = petals >= item.price;
+                
+                const btn = document.createElement('div');
+                btn.className = `p-4 rounded-xl border ${isOwned ? 'bg-green-50 border-green-200' : 'bg-white border-pink-100'} shadow-sm flex flex-col items-center`;
+                btn.innerHTML = `
+                    <div class="text-4xl mb-2">${item.icon}</div>
+                    <div class="font-bold text-sm text-gray-700">${item.name}</div>
+                    <div class="text-xs ${isOwned ? 'text-green-600 font-bold' : 'text-yellow-600'} mb-2">
+                        ${isOwned ? 'OWNED' : `${item.price} 🪙`}
+                    </div>
+                    ${!isOwned 
+                        ? `<button onclick="buyItem('${item.id}', ${item.price})" class="px-3 py-1 rounded-lg text-xs font-bold transition ${canAfford ? 'bg-pink-500 text-white hover:bg-pink-600' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}" ${!canAfford ? 'disabled' : ''}>Buy</button>`
+                        : '<span class="text-xs text-green-500">✓</span>'
+                    }
+                `;
+                shopGrid.appendChild(btn);
+            });
+        }
+
+        window.buyItem = async function(itemId, price) {
+            if (petals < price) return;
+            playSound('buy');
+            
+            const pairId = [myId, partnerId].sort().join('_');
+            const docRef = doc(db, collectionPath, pairId);
+            
+            try {
+                // Optimistic UI update
+                petals -= price;
+                petalsDisplay.innerText = petals;
+                inventory.push(itemId);
+                renderShop(); // Redraw shop to show "Owned"
+
+                const snap = await getDoc(docRef);
+                let currentSpent = snap.exists() ? (snap.data().spentPetals || 0) : 0;
+                let currentInventory = snap.exists() ? (snap.data().inventory || []) : [];
+                
+                await setDoc(docRef, {
+                    spentPetals: currentSpent + price,
+                    inventory: [...currentInventory, itemId]
+                }, { merge: true });
+
+            } catch (e) {
+                showError("Purchase failed: " + e.message);
+            }
+        }
+
+        // --- DAILY QUESTION LOGIC ---
+        function getDailyQuestionIndex() {
+            // Simple hash of date string to pick a consistent random question index
+            const dateStr = new Date().toDateString();
+            let hash = 0;
+            for (let i = 0; i < dateStr.length; i++) {
+                hash = dateStr.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            return Math.abs(hash) % DAILY_QUESTIONS.length;
+        }
+
+        function loadDailyQuestion(data) {
+            const today = new Date().toDateString();
+            const qIndex = getDailyQuestionIndex();
+            dailyQuestionText.innerText = DAILY_QUESTIONS[qIndex];
+            
+            // Default State
+            dailyInputArea.classList.remove('hidden');
+            dailyResultArea.classList.add('hidden');
+            dailyAnswerInput.value = "";
+            
+            if (!data || !data.dailyQ || data.dailyQ.date !== today) {
+                // New day or no data yet
+                return;
+            }
+
+            const dq = data.dailyQ;
+            const myAnswer = dq.answers ? dq.answers[myId] : null;
+            const partnerAnswer = dq.answers ? dq.answers[partnerId] : null;
+
+            if (myAnswer) {
+                // I have answered
+                dailyInputArea.classList.add('hidden');
+                dailyResultArea.classList.remove('hidden');
+                
+                if (partnerAnswer) {
+                    // Both answered!
+                    dailyStatusMsg.innerText = "✨ Daily Connection Complete! (+20 Bonus) ✨";
+                    dailyStatusMsg.className = "text-sm font-bold text-green-600 mb-4";
+                    
+                    partnerAnswerDisplay.classList.remove('hidden');
+                    partnerAnswerText.innerText = partnerAnswer;
+                    
+                    // Award bonus if not claimed
+                    if (!dq.claimed && dq.claimer === myId) {
+                         // Logic to claim happens in submit, but visualization is here
+                    }
+                } else {
+                    // Waiting for partner
+                    dailyStatusMsg.innerText = "Answer submitted! Waiting for partner...";
+                    dailyStatusMsg.className = "text-sm font-bold text-pink-500 mb-4 animate-pulse";
+                    partnerAnswerDisplay.classList.add('hidden');
+                }
+            }
+        }
+
+        window.submitDailyAnswer = async function() {
+            const answer = dailyAnswerInput.value.trim();
+            if (!answer) return;
+            
+            const pairId = [myId, partnerId].sort().join('_');
+            const docRef = doc(db, collectionPath, pairId);
+            const today = new Date().toDateString();
+            
+            try {
+                // Fetch current state to check if partner already answered
+                const snap = await getDoc(docRef);
+                const data = snap.data();
+                const dq = (data && data.dailyQ && data.dailyQ.date === today) ? data.dailyQ : { date: today, answers: {}, claimed: false };
+                
+                // Update my answer
+                dq.answers = dq.answers || {};
+                dq.answers[myId] = answer;
+                
+                // Check if this completes the pair
+                let bonus = 0;
+                let claimed = dq.claimed;
+                if (!claimed && dq.answers[partnerId]) {
+                    bonus = 20; // 20 flower + 20 petal bonus
+                    claimed = true;
+                    dq.claimed = true;
+                    playSound('levelup'); // Reusing success sound
+                }
+
+                await setDoc(docRef, {
+                    dailyQ: dq,
+                    count: (data.count || 0) + bonus,
+                }, { merge: true });
+
+            } catch(e) {
+                showError("Failed to submit: " + e.message);
+            }
+        }
+
+
+        // --- MAIN GAME ACTIONS ---
+
+        window.waterGarden = async function() {
+            if (!partnerId) return;
+            playSound('water');
+            
+            const pairId = [myId, partnerId].sort().join('_');
+            const docRef = doc(db, collectionPath, pairId);
+            
+            try {
+                const snap = await getDoc(docRef);
+                let count = snap.exists() ? (snap.data().count || 0) : 0;
+                
+                await setDoc(docRef, {
+                    count: count + 10, // Bonus for watering
+                    lastWatered: Date.now(),
+                    lastWaterer: myId,
+                    lastAction: 'water'
+                }, { merge: true });
+                
+                waterBtn.disabled = true;
+                waterBadge.classList.add('hidden');
+            } catch(e) {
+                showError("Watering failed: " + e.message);
+            }
+        }
+
+        function checkWaterStatus(lastWateredTimestamp) {
+            const now = Date.now();
+            const last = lastWateredTimestamp || 0;
+            const hoursPassed = (now - last) / (1000 * 60 * 60);
+            
+            if (hoursPassed >= 20) {
+                waterBtn.disabled = false;
+                waterBadge.classList.remove('hidden');
+            } else {
+                waterBtn.disabled = true;
+                waterBadge.classList.add('hidden');
+            }
+        }
+
+        window.sendFlower = async function() {
+            if (!partnerId) return;
+
+            const pairId = [myId, partnerId].sort().join('_');
+            const docRef = doc(db, collectionPath, pairId);
+            const userNote = noteInput.value.trim();
+
+            try {
+                const snap = await getDoc(docRef);
+                let currentCount = 0;
+                if (snap.exists()) {
+                    currentCount = snap.data().count || 0;
+                }
+
+                const isShiny = Math.random() < 0.05;
+                const bonus = isShiny ? 5 : 1;
+                
+                const unlocked = GAME_LEVELS.filter(l => l.count <= currentCount);
+                const randomItem = unlocked[Math.floor(Math.random() * unlocked.length)];
+
+                if (isShiny) playSound('shiny');
+                else playSound('send');
+
+                await setDoc(docRef, {
+                    sender: myId,
+                    flower: randomItem.emoji,
+                    note: userNote,
+                    isShiny: isShiny,
+                    count: currentCount + bonus,
+                    timestamp: Date.now(),
+                    lastAction: 'flower'
+                }, { merge: true });
+                
+                noteInput.value = ""; 
+
+            } catch (err) {
+                showError("Failed to send: " + err.message);
+            }
+        };
+
+        function updateUI(data) {
+            const count = data.count || 0;
+            const spent = data.spentPetals || 0;
+            
+            // Update Global State
+            inventory = data.inventory || [];
+            petals = count - spent;
+            if (petals < 0) petals = 0; // Safety check
+
+            counterDisplay.innerText = count;
+            petalsDisplay.innerText = petals;
+
+            // Render Scene (Decorations)
+            sceneDisplay.innerHTML = '';
+            SHOP_ITEMS.forEach(item => {
+                if (inventory.includes(item.id)) {
+                    const el = document.createElement('div');
+                    el.className = 'scene-item';
+                    el.innerText = item.icon;
+                    sceneDisplay.appendChild(el);
+                }
+            });
+
+            // Level Up Check
+            const currentLevelIndex = GAME_LEVELS.findLastIndex(l => count >= l.count);
+            const nextLevel = GAME_LEVELS[currentLevelIndex + 1];
+            
+            if (count > localCount) {
+                const prevLevelIndex = GAME_LEVELS.findLastIndex(l => localCount >= l.count);
+                if (currentLevelIndex > prevLevelIndex) {
+                    triggerLevelUp(GAME_LEVELS[currentLevelIndex]);
+                }
+            }
+            localCount = count;
+
+            // Progress Bar
+            let progressPercent = 100;
+            if (nextLevel) {
+                const prevThreshold = GAME_LEVELS[currentLevelIndex].count;
+                const nextThreshold = nextLevel.count;
+                const range = nextThreshold - prevThreshold;
+                const currentProgress = count - prevThreshold;
+                progressPercent = Math.floor((currentProgress / range) * 100);
+                nextUnlockText.innerText = `Next: ${nextLevel.name}`;
+                currentLevelSpan.innerText = currentLevelIndex + 1;
+            } else {
+                nextUnlockText.innerText = "Max Level!";
+                currentLevelSpan.innerText = "MAX";
+            }
+            progressBar.style.width = `${progressPercent}%`;
+
+            renderGarden(count);
+
+            // Action Feed (Only in Garden Tab)
+            if (data.lastAction === 'water') {
+                const actor = data.lastWaterer === myId ? "You" : "Partner";
+                statusDisplay.innerHTML = `
+                    <div class="flex flex-col items-center">
+                        <span class="text-3xl mb-1">🚿</span>
+                        <span class="text-xs text-blue-500 font-bold">${actor} watered the garden (+10)!</span>
+                    </div>
+                `;
+            } else if (data.sender) {
+                const isMe = data.sender === myId;
+                const noteHtml = data.note ? `<div class="bg-white/80 px-3 py-1 rounded-full text-xs text-gray-700 italic mt-1 shadow-sm border border-pink-100">"${data.note}"</div>` : '';
+                const shinyClass = data.isShiny ? 'relative shiny-sparkle' : '';
+                const shinyText = data.isShiny ? '<span class="text-yellow-500 font-bold text-[10px] uppercase">Golden Flower! (+5)</span>' : '';
+                
+                if (!isMe && data.timestamp > (Date.now() - 5000)) {
+                    playSound('receive');
+                }
+
+                if (isMe) {
+                    statusDisplay.innerHTML = `
+                        <div class="flex flex-col items-center">
+                            <span class="text-3xl mb-1 ${shinyClass}">${data.flower}</span>
+                            <span class="text-xs text-gray-400">You planted a flower!</span>
+                            ${shinyText}
+                            ${noteHtml}
+                        </div>
+                    `;
+                } else {
+                    statusDisplay.innerHTML = `
+                        <div class="flex flex-col items-center animate-bounce">
+                            <span class="text-4xl mb-1 ${shinyClass}">${data.flower}</span>
+                            <span class="text-sm text-pink-600 font-bold">Partner planted a flower!</span>
+                            ${shinyText}
+                            ${noteHtml}
+                        </div>
+                    `;
+                }
+            }
+        }
+
+        function renderGarden(currentCount) {
+            gardenGrid.innerHTML = '';
+            GAME_LEVELS.forEach(level => {
+                const isUnlocked = currentCount >= level.count;
+                const el = document.createElement('div');
+                el.className = `garden-item ${isUnlocked ? 'unlocked' : 'locked'} flex flex-col items-center w-12`;
+                el.innerHTML = `
+                    <span class="text-2xl">${level.emoji}</span>
+                    ${!isUnlocked ? `<span class="text-[8px] text-gray-400 mt-1">${level.count}</span>` : ''}
+                `;
+                gardenGrid.appendChild(el);
+            });
+        }
+
+        function triggerLevelUp(levelData) {
+            playSound('levelup');
+            startConfetti();
+            levelUpIcon.innerText = levelData.emoji;
+            levelUpName.innerText = levelData.name;
+            levelUpOverlay.classList.remove('hidden');
+        }
+
+        window.closeLevelUp = function() {
+            levelUpOverlay.classList.add('hidden');
+        }
+
+        window.copyMyId = function() {
+            myIdInput.select();
+            document.execCommand('copy');
+            const feedback = document.getElementById('copy-feedback');
+            feedback.classList.remove('hidden');
+            setTimeout(() => feedback.classList.add('hidden'), 2000);
+        };
+
+        function showError(msg) {
+            errorBanner.textContent = msg;
+            errorBanner.classList.remove('hidden');
+            // Ensure auth view is hidden if error occurs inside app, but visible if outside
+            // This is tricky, simpler is just to show banner
+        }
+
+        // Start App
+        init();
+
+    </script>
+</body>
+</html>
