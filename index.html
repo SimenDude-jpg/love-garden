@@ -11,9 +11,7 @@
     <meta name="apple-mobile-web-app-title" content="Love Garden">
     
     <!-- CHANGE THE ICON HERE -->
-    <!-- Option 1: If you uploaded a file named 'icon.png' to GitHub, keep this: -->
     <link rel="apple-touch-icon" href="icon.png">
-    <!-- Option 2: If you want to use a web link, replace 'icon.png' with the https://... link -->
 
     <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -162,6 +160,38 @@
             font-size: 2.5rem;
             animation: pop-scale 0.5s ease-out backwards;
         }
+
+        /* Message Log Styling */
+        .msg-bubble {
+            max-width: 85%;
+            padding: 8px 12px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            position: relative;
+            margin-bottom: 8px;
+            animation: fadeIn 0.3s ease-out;
+            word-wrap: break-word;
+        }
+        /* My messages */
+        .msg-me {
+            background-color: #fce7f3; /* pink-100 */
+            color: #9d174d; /* pink-800 */
+            align-self: flex-end;
+            border-bottom-right-radius: 2px;
+        }
+        .theme-night .msg-me { background-color: #831843; color: #fce7f3; }
+        
+        /* Partner messages */
+        .msg-partner {
+            background-color: #e0f2fe; /* sky-100 */
+            color: #0369a1; /* sky-700 */
+            align-self: flex-start;
+            border-bottom-left-radius: 2px;
+        }
+        .theme-night .msg-partner { background-color: #0c4a6e; color: #e0f2fe; }
+
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 4px; }
     </style>
 </head>
 <body class="theme-day min-h-screen font-sans text-gray-800 flex items-center justify-center p-4 transition-colors duration-500">
@@ -310,19 +340,23 @@
                             </div>
                         </div>
 
-                        <!-- Status & Note Display -->
-                        <div id="status-display" class="min-h-[4rem] flex flex-col items-center justify-center text-center mb-4 p-2 bg-white/30 rounded-xl border border-pink-50">
-                            <span class="text-gray-500 text-sm">Tap below to grow the garden!</span>
-                        </div>
-
                         <!-- Controls: Note & Button -->
                         <div class="flex flex-col gap-3">
-                            <input type="text" id="love-note" placeholder="Attach a message... (Optional)" maxlength="40" 
+                            <input type="text" id="love-note" placeholder="Attach a message... (Optional)" maxlength="60" 
                                 class="w-full bg-white/80 text-gray-700 text-sm p-3 rounded-xl border border-pink-100 focus:border-pink-300 outline-none text-center">
                             
                             <button onclick="sendFlower()" class="w-full py-4 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-2xl font-bold text-lg shadow-xl shadow-pink-200 hover:shadow-pink-300 transform transition hover:-translate-y-1 float-hover active:scale-95 flex items-center justify-center gap-2">
                                 <span class="flower-icon">✨</span> Plant Flower
                             </button>
+                        </div>
+
+                        <!-- Message Log (New Feature) -->
+                        <div class="mt-6">
+                            <h4 class="text-xs font-bold text-gray-400 uppercase mb-3 text-center tracking-widest">Love Notes History</h4>
+                            <div id="message-log" class="flex flex-col h-48 overflow-y-auto p-2 bg-white/40 rounded-xl border border-pink-50 custom-scrollbar shadow-inner">
+                                <!-- Messages injected here -->
+                                <div class="text-center text-xs text-gray-400 italic mt-4">No notes yet... send one!</div>
+                            </div>
                         </div>
                     </div>
 
@@ -501,6 +535,7 @@
         const gardenGrid = document.getElementById('garden-grid');
         const sceneDisplay = document.getElementById('scene-display');
         const shopGrid = document.getElementById('shop-grid');
+        const messageLog = document.getElementById('message-log');
         const levelUpOverlay = document.getElementById('levelup-overlay');
         const levelUpIcon = document.getElementById('levelup-icon');
         const levelUpName = document.getElementById('levelup-name');
@@ -627,9 +662,6 @@
                 auth = getAuth(app);
                 db = getFirestore(app);
 
-                // Note: We do NOT auto-sign-in anymore. 
-                // We wait for auth state. If none, we show Login screen.
-
                 onAuthStateChanged(auth, (user) => {
                     if (user) {
                         // Logged In
@@ -702,7 +734,6 @@
 
         window.handleLogout = async function() {
             await signOut(auth);
-            // State resets automatically via onAuthStateChanged
             disconnectPartner(); // Reset local game state
         }
 
@@ -751,6 +782,7 @@
             connectionSection.classList.remove('hidden');
             disconnectBtn.classList.add('hidden');
             statusDisplay.innerHTML = "";
+            messageLog.innerHTML = "";
             localCount = 0;
             counterDisplay.innerText = "0";
             petals = 0;
@@ -773,7 +805,6 @@
                     updateUI(data);
                     checkWaterStatus(data.lastWatered);
                     
-                    // Daily Question Check
                     if (document.getElementById('view-daily').classList.contains('hidden') === false) {
                         loadDailyQuestion(data);
                     }
@@ -823,11 +854,10 @@
             const docRef = doc(db, collectionPath, pairId);
             
             try {
-                // Optimistic UI update
                 petals -= price;
                 petalsDisplay.innerText = petals;
                 inventory.push(itemId);
-                renderShop(); // Redraw shop to show "Owned"
+                renderShop();
 
                 const snap = await getDoc(docRef);
                 let currentSpent = snap.exists() ? (snap.data().spentPetals || 0) : 0;
@@ -845,7 +875,6 @@
 
         // --- DAILY QUESTION LOGIC ---
         function getDailyQuestionIndex() {
-            // Simple hash of date string to pick a consistent random question index
             const dateStr = new Date().toDateString();
             let hash = 0;
             for (let i = 0; i < dateStr.length; i++) {
@@ -859,13 +888,11 @@
             const qIndex = getDailyQuestionIndex();
             dailyQuestionText.innerText = DAILY_QUESTIONS[qIndex];
             
-            // Default State
             dailyInputArea.classList.remove('hidden');
             dailyResultArea.classList.add('hidden');
             dailyAnswerInput.value = "";
             
             if (!data || !data.dailyQ || data.dailyQ.date !== today) {
-                // New day or no data yet
                 return;
             }
 
@@ -874,24 +901,16 @@
             const partnerAnswer = dq.answers ? dq.answers[partnerId] : null;
 
             if (myAnswer) {
-                // I have answered
                 dailyInputArea.classList.add('hidden');
                 dailyResultArea.classList.remove('hidden');
                 
                 if (partnerAnswer) {
-                    // Both answered!
                     dailyStatusMsg.innerText = "✨ Daily Connection Complete! (+20 Bonus) ✨";
                     dailyStatusMsg.className = "text-sm font-bold text-green-600 mb-4";
                     
                     partnerAnswerDisplay.classList.remove('hidden');
                     partnerAnswerText.innerText = partnerAnswer;
-                    
-                    // Award bonus if not claimed
-                    if (!dq.claimed && dq.claimer === myId) {
-                         // Logic to claim happens in submit, but visualization is here
-                    }
                 } else {
-                    // Waiting for partner
                     dailyStatusMsg.innerText = "Answer submitted! Waiting for partner...";
                     dailyStatusMsg.className = "text-sm font-bold text-pink-500 mb-4 animate-pulse";
                     partnerAnswerDisplay.classList.add('hidden');
@@ -908,23 +927,20 @@
             const today = new Date().toDateString();
             
             try {
-                // Fetch current state to check if partner already answered
                 const snap = await getDoc(docRef);
                 const data = snap.data();
                 const dq = (data && data.dailyQ && data.dailyQ.date === today) ? data.dailyQ : { date: today, answers: {}, claimed: false };
                 
-                // Update my answer
                 dq.answers = dq.answers || {};
                 dq.answers[myId] = answer;
                 
-                // Check if this completes the pair
                 let bonus = 0;
                 let claimed = dq.claimed;
                 if (!claimed && dq.answers[partnerId]) {
-                    bonus = 20; // 20 flower + 20 petal bonus
+                    bonus = 20; 
                     claimed = true;
                     dq.claimed = true;
-                    playSound('levelup'); // Reusing success sound
+                    playSound('levelup');
                 }
 
                 await setDoc(docRef, {
@@ -952,7 +968,7 @@
                 let count = snap.exists() ? (snap.data().count || 0) : 0;
                 
                 await setDoc(docRef, {
-                    count: count + 10, // Bonus for watering
+                    count: count + 10,
                     lastWatered: Date.now(),
                     lastWaterer: myId,
                     lastAction: 'water'
@@ -989,8 +1005,10 @@
             try {
                 const snap = await getDoc(docRef);
                 let currentCount = 0;
+                let history = [];
                 if (snap.exists()) {
                     currentCount = snap.data().count || 0;
+                    history = snap.data().messageHistory || [];
                 }
 
                 const isShiny = Math.random() < 0.05;
@@ -1002,6 +1020,18 @@
                 if (isShiny) playSound('shiny');
                 else playSound('send');
 
+                const newMessage = {
+                    sender: myId,
+                    flower: randomItem.emoji,
+                    note: userNote,
+                    isShiny: isShiny,
+                    timestamp: Date.now()
+                };
+
+                // Add to history and keep last 10
+                history.unshift(newMessage);
+                if (history.length > 10) history = history.slice(0, 10);
+
                 await setDoc(docRef, {
                     sender: myId,
                     flower: randomItem.emoji,
@@ -1009,7 +1039,8 @@
                     isShiny: isShiny,
                     count: currentCount + bonus,
                     timestamp: Date.now(),
-                    lastAction: 'flower'
+                    lastAction: 'flower',
+                    messageHistory: history
                 }, { merge: true });
                 
                 noteInput.value = ""; 
@@ -1023,15 +1054,39 @@
             const count = data.count || 0;
             const spent = data.spentPetals || 0;
             
-            // Update Global State
             inventory = data.inventory || [];
             petals = count - spent;
-            if (petals < 0) petals = 0; // Safety check
+            if (petals < 0) petals = 0;
 
             counterDisplay.innerText = count;
             petalsDisplay.innerText = petals;
 
-            // Render Scene (Decorations)
+            // Render Message History
+            if (data.messageHistory && data.messageHistory.length > 0) {
+                messageLog.innerHTML = '';
+                data.messageHistory.forEach(msg => {
+                    const isMe = msg.sender === myId;
+                    const bubble = document.createElement('div');
+                    bubble.className = `msg-bubble ${isMe ? 'msg-me' : 'msg-partner'}`;
+                    const shinyIcon = msg.isShiny ? '✨' : '';
+                    const noteText = msg.note ? `<div class="italic">"${msg.note}"</div>` : '';
+                    
+                    // Simple date formatting
+                    const time = new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                    
+                    bubble.innerHTML = `
+                        <div class="flex items-center gap-1 mb-1">
+                            <span class="text-lg">${msg.flower}</span>
+                            <span class="text-[10px] opacity-70">${shinyIcon} ${time}</span>
+                        </div>
+                        ${noteText}
+                    `;
+                    messageLog.appendChild(bubble);
+                });
+            } else {
+                messageLog.innerHTML = '<div class="text-center text-xs text-gray-400 italic mt-4">No notes yet... send one!</div>';
+            }
+
             sceneDisplay.innerHTML = '';
             SHOP_ITEMS.forEach(item => {
                 if (inventory.includes(item.id)) {
@@ -1042,7 +1097,6 @@
                 }
             });
 
-            // Level Up Check
             const currentLevelIndex = GAME_LEVELS.findLastIndex(l => count >= l.count);
             const nextLevel = GAME_LEVELS[currentLevelIndex + 1];
             
@@ -1054,7 +1108,6 @@
             }
             localCount = count;
 
-            // Progress Bar
             let progressPercent = 100;
             if (nextLevel) {
                 const prevThreshold = GAME_LEVELS[currentLevelIndex].count;
@@ -1072,43 +1125,10 @@
 
             renderGarden(count);
 
-            // Action Feed (Only in Garden Tab)
-            if (data.lastAction === 'water') {
-                const actor = data.lastWaterer === myId ? "You" : "Partner";
-                statusDisplay.innerHTML = `
-                    <div class="flex flex-col items-center">
-                        <span class="text-3xl mb-1">🚿</span>
-                        <span class="text-xs text-blue-500 font-bold">${actor} watered the garden (+10)!</span>
-                    </div>
-                `;
-            } else if (data.sender) {
+            if (data.sender) {
                 const isMe = data.sender === myId;
-                const noteHtml = data.note ? `<div class="bg-white/80 px-3 py-1 rounded-full text-xs text-gray-700 italic mt-1 shadow-sm border border-pink-100">"${data.note}"</div>` : '';
-                const shinyClass = data.isShiny ? 'relative shiny-sparkle' : '';
-                const shinyText = data.isShiny ? '<span class="text-yellow-500 font-bold text-[10px] uppercase">Golden Flower! (+5)</span>' : '';
-                
                 if (!isMe && data.timestamp > (Date.now() - 5000)) {
                     playSound('receive');
-                }
-
-                if (isMe) {
-                    statusDisplay.innerHTML = `
-                        <div class="flex flex-col items-center">
-                            <span class="text-3xl mb-1 ${shinyClass}">${data.flower}</span>
-                            <span class="text-xs text-gray-400">You planted a flower!</span>
-                            ${shinyText}
-                            ${noteHtml}
-                        </div>
-                    `;
-                } else {
-                    statusDisplay.innerHTML = `
-                        <div class="flex flex-col items-center animate-bounce">
-                            <span class="text-4xl mb-1 ${shinyClass}">${data.flower}</span>
-                            <span class="text-sm text-pink-600 font-bold">Partner planted a flower!</span>
-                            ${shinyText}
-                            ${noteHtml}
-                        </div>
-                    `;
                 }
             }
         }
@@ -1150,8 +1170,6 @@
         function showError(msg) {
             errorBanner.textContent = msg;
             errorBanner.classList.remove('hidden');
-            // Ensure auth view is hidden if error occurs inside app, but visible if outside
-            // This is tricky, simpler is just to show banner
         }
 
         // Start App
