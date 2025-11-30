@@ -9,485 +9,299 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Love Garden">
-    
-    <!-- CHANGE THE ICON HERE -->
     <link rel="apple-touch-icon" href="icon.png">
 
     <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Smooth fade animations */
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fade-in {
-            animation: fadeIn 0.5s ease-out forwards;
-        }
+        /* --- CORE ANIMATIONS --- */
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
+        
+        @keyframes pop { 0% { transform: scale(0.8); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+        .animate-pop { animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
 
-        /* Card styling - Dynamic variables for themes */
+        /* --- THEME STYLES --- */
         :root {
-            --bg-gradient-from: #fff5f7;
-            --bg-gradient-to: #fff0f5;
-            --accent-color: #ec4899; /* pink-500 */
+            --bg-gradient-from: #e0f2fe; /* sky-100 */
+            --bg-gradient-to: #f0f9ff; /* sky-50 */
+            --accent-color: #ec4899;
         }
+        body { transition: background-color 1s ease, color 0.5s ease; overflow: hidden; }
+        
+        /* Day Theme */
+        body.theme-day { background: linear-gradient(to bottom, #7dd3fc, #bae6fd); color: #1e293b; }
+        /* Night Theme */
+        body.theme-night { background: linear-gradient(to bottom, #0f172a, #312e81); color: #e2e8f0; }
+        /* Sunset Theme */
+        body.theme-sunset { background: linear-gradient(to bottom, #f43f5e, #fbbf24); color: #fff1f2; }
 
-        /* Theme Classes */
-        body.theme-day { background-color: #fdf2f8; }
-        body.theme-night { background-color: #1e1b4b; color: #e2e8f0; }
-        body.theme-sunset { background-color: #4c0519; color: #fff1f2; }
+        /* --- DYNAMIC BACKGROUND ELEMENTS --- */
+        .cloud {
+            position: absolute; background: rgba(255,255,255,0.6); border-radius: 50%;
+            animation: floatCloud linear infinite; pointer-events: none; z-index: 0;
+        }
+        .cloud::after { content: ''; position: absolute; background: inherit; border-radius: 50%; }
+        @keyframes floatCloud { from { transform: translateX(-100%); } to { transform: translateX(100vw); } }
 
-        .flower-card {
-            background: linear-gradient(135deg, var(--bg-gradient-from) 0%, var(--bg-gradient-to) 100%);
-            box-shadow: 0 10px 25px -5px rgba(0,0,0, 0.1), 0 8px 10px -6px rgba(0,0,0, 0.1);
+        .star {
+            position: absolute; background: white; border-radius: 50%;
+            animation: twinkle ease-in-out infinite; pointer-events: none; z-index: 0;
+        }
+        @keyframes twinkle { 0%, 100% { opacity: 0.3; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.2); } }
+
+        .raindrop {
+            position: absolute; width: 2px; height: 15px; background: rgba(255,255,255,0.5);
+            animation: rainFall 0.7s linear infinite; pointer-events: none; z-index: 10;
+        }
+        @keyframes rainFall { from { transform: translateY(-20px); } to { transform: translateY(100vh); } }
+
+        /* --- ORGANIC GARDEN --- */
+        #garden-container {
+            position: relative; width: 100%; height: 60vh;
+            overflow: hidden; z-index: 10;
+        }
+        /* The grass floor */
+        .ground-overlay {
+            position: absolute; bottom: 0; left: 0; width: 100%; height: 30%;
+            background: linear-gradient(to top, rgba(20, 83, 45, 0.4), transparent);
+            pointer-events: none; z-index: 5;
+        }
+        .flower-sprite {
+            position: absolute; bottom: 0; 
             transition: all 0.5s ease;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
+            font-size: 2rem;
+            transform-origin: bottom center;
+            animation: growFlower 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
         }
-        
-        /* Specific Theme Overrides */
-        .theme-night .flower-card { --bg-gradient-from: #312e81; --bg-gradient-to: #1e1b4b; border-color: #4338ca; color: white; }
-        .theme-night .text-gray-800 { color: #e2e8f0; }
-        .theme-night .text-gray-600 { color: #cbd5e1; }
-        .theme-night .bg-white { background-color: #312e81; color: white; border-color: #4338ca; }
-        .theme-night .bg-gray-50 { background-color: #3730a3; color: white; border-color: #4338ca; }
-        .theme-night .text-pink-600 { color: #f472b6; } 
+        @keyframes growFlower { from { transform: scale(0); } to { transform: scale(1); } }
 
-        .theme-sunset .flower-card { --bg-gradient-from: #881337; --bg-gradient-to: #4c0519; border-color: #9f1239; color: white; }
-        .theme-sunset .text-gray-800 { color: #ffe4e6; }
-        .theme-sunset .text-gray-600 { color: #fecdd3; }
-        .theme-sunset .bg-white { background-color: #9f1239; color: white; border-color: #be123c; }
-        .theme-sunset .bg-gray-50 { background-color: #881337; color: white; border-color: #be123c; }
-
-
-        /* Interactive Element Styles */
-        .interactive-input { transition: all 0.2s; }
-        .interactive-input:focus { transform: scale(1.01); }
-        
-        .action-button { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
-        .action-button:active { transform: scale(0.95); }
-        
-        /* Floating flower animation */
-        @keyframes float {
-            0% { transform: translateY(0px); }
-            50% { transform: translateY(-5px); }
-            100% { transform: translateY(0px); }
+        /* --- UI COMPONENTS --- */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
         }
-        .float-hover:hover .flower-icon {
-            animation: float 2s ease-in-out infinite;
-            display: inline-block;
-        }
+        body.theme-night .glass-panel { background: rgba(15, 23, 42, 0.4); border-color: rgba(255,255,255,0.1); }
 
-        /* Locked/Unlocked Item Styles */
-        .garden-item { transition: all 0.3s ease; }
-        .garden-item.locked { filter: grayscale(100%) opacity(0.4); transform: scale(0.9); }
-        .garden-item.unlocked { filter: grayscale(0%) opacity(1); transform: scale(1.1); text-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        
-        /* Shiny Effect */
-        @keyframes sparkle {
-            0% { opacity: 0; transform: scale(0.5) rotate(0deg); }
-            50% { opacity: 1; transform: scale(1.2) rotate(180deg); }
-            100% { opacity: 0; transform: scale(0.5) rotate(360deg); }
+        /* Bottom Nav */
+        .bottom-nav {
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            width: 90%; max-width: 400px;
+            display: flex; justify-content: space-around;
+            padding: 12px; border-radius: 24px;
+            z-index: 50;
         }
-        .shiny-sparkle::after {
-            content: '✨';
-            position: absolute;
-            top: -10px; right: -10px;
-            font-size: 1rem;
-            animation: sparkle 1.5s infinite;
+        .nav-btn {
+            font-size: 1.5rem; opacity: 0.6; transition: all 0.2s;
+            position: relative;
+        }
+        .nav-btn.active { opacity: 1; transform: translateY(-5px); }
+        .nav-btn.active::after {
+            content: ''; position: absolute; bottom: -5px; left: 50%; transform: translateX(-50%);
+            width: 4px; height: 4px; background: currentColor; border-radius: 50%;
         }
 
-        /* Progress Bar Strip */
-        .progress-strip {
-            background-size: 20px 20px;
-            background-image: linear-gradient(
-                45deg, 
-                rgba(255, 255, 255, .15) 25%, 
-                transparent 25%, 
-                transparent 50%, 
-                rgba(255, 255, 255, .15) 50%, 
-                rgba(255, 255, 255, .15) 75%, 
-                transparent 75%, 
-                transparent
-            );
-            animation: move-stripes 1s linear infinite;
+        /* Juicy Buttons */
+        .juicy-btn {
+            transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        @keyframes move-stripes {
-            0% { background-position: 0 0; }
-            100% { background-position: 20px 20px; }
-        }
+        .juicy-btn:active { transform: scale(0.90); }
 
-        /* Level Up Animation */
-        @keyframes pop-scale {
-            0% { transform: scale(0.5); opacity: 0; }
-            50% { transform: scale(1.2); opacity: 1; }
-            100% { transform: scale(1); opacity: 1; }
+        /* Polaroid Memory */
+        .polaroid {
+            background: white; padding: 10px 10px 25px 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transform: rotate(-2deg); margin-bottom: 15px;
+            color: #333; font-family: 'Courier New', monospace;
+            animation: fadeIn 0.5s ease-out;
         }
-        .level-up-modal {
-            animation: pop-scale 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-        }
-        
-        /* Confetti Canvas */
-        #confetti-canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 60;
-        }
+        .polaroid:nth-child(even) { transform: rotate(1deg); }
 
-        /* Heartbeat Pulse Overlay */
+        /* Gift Box Overlay */
+        #gift-overlay {
+            position: fixed; inset: 0; z-index: 100;
+            background: rgba(0,0,0,0.8);
+            /* Removed display:flex from here to allow 'hidden' class to work */
+        }
+        .gift-box { font-size: 5rem; cursor: pointer; animation: bounce 2s infinite; }
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }
+
+        /* Heartbeat */
         #heartbeat-overlay {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none;
-            z-index: 55; /* Below confetti, above everything else */
-            opacity: 0;
-            background: radial-gradient(circle, rgba(244, 114, 182, 0.4) 0%, transparent 80%);
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 60; opacity: 0;
+            background: radial-gradient(circle, rgba(244, 114, 182, 0.6) 0%, transparent 70%);
             transition: opacity 0.2s;
         }
-        .pulse-active {
-            animation: heartbeat-flash 1s ease-in-out 2; /* 2 beats */
-        }
-        @keyframes heartbeat-flash {
-            0% { opacity: 0; transform: scale(0.95); }
-            30% { opacity: 1; transform: scale(1.05); } /* Thump */
-            50% { opacity: 0.5; transform: scale(1.0); }
-            70% { opacity: 1; transform: scale(1.05); } /* Thump */
-            100% { opacity: 0; transform: scale(0.95); }
-        }
-
-        /* Tabs */
-        .tab-btn.active {
-            background-color: rgba(255, 255, 255, 0.5);
-            font-weight: bold;
-            border-bottom: 2px solid var(--accent-color);
-        }
-        .theme-night .tab-btn.active {
-            background-color: rgba(255, 255, 255, 0.1);
-        }
-
-        /* Decoration Placement */
-        .scene-container {
-            min-height: 80px;
-            position: relative;
-            display: flex;
-            align-items: flex-end;
-            justify-content: center;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-        .scene-item {
-            font-size: 2.5rem;
-            animation: pop-scale 0.5s ease-out backwards;
-        }
-
-        /* Message Log Styling */
-        .msg-bubble {
-            max-width: 85%;
-            padding: 8px 12px;
-            border-radius: 12px;
-            font-size: 0.85rem;
-            position: relative;
-            margin-bottom: 8px;
-            animation: fadeIn 0.3s ease-out;
-            word-wrap: break-word;
-        }
-        /* My messages */
-        .msg-me {
-            background-color: #fce7f3; /* pink-100 */
-            color: #9d174d; /* pink-800 */
-            align-self: flex-end;
-            border-bottom-right-radius: 2px;
-        }
-        .theme-night .msg-me { background-color: #831843; color: #fce7f3; }
+        .pulse-active { animation: heartbeat-flash 1s ease-in-out 2; }
+        @keyframes heartbeat-flash { 0% { opacity: 0; transform: scale(0.9); } 30% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(0.9); } }
         
-        /* Partner messages */
-        .msg-partner {
-            background-color: #e0f2fe; /* sky-100 */
-            color: #0369a1; /* sky-700 */
-            align-self: flex-start;
-            border-bottom-left-radius: 2px;
-        }
-        .theme-night .msg-partner { background-color: #0c4a6e; color: #e0f2fe; }
-
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 4px; }
-        
-        /* Ambience Button Active State */
-        .ambience-active {
-            background-color: #dbeafe; /* blue-100 */
-            color: #2563eb; /* blue-600 */
-            border-color: #93c5fd;
-        }
+        #confetti-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 70; }
     </style>
 </head>
-<body class="theme-day min-h-screen font-sans text-gray-800 flex items-center justify-center p-4 transition-colors duration-500">
+<body class="theme-day font-sans text-gray-800">
 
-    <!-- Main Container -->
-    <main class="w-full max-w-lg flower-card rounded-3xl border border-pink-100 overflow-hidden relative">
-        
-        <!-- Decoration Circles -->
-        <div class="absolute top-0 right-0 -mr-16 -mt-16 w-32 h-32 bg-pink-100 rounded-full opacity-50 blur-2xl pointer-events-none mix-blend-multiply"></div>
-        <div class="absolute bottom-0 left-0 -ml-16 -mb-16 w-32 h-32 bg-yellow-100 rounded-full opacity-50 blur-2xl pointer-events-none mix-blend-multiply"></div>
-        
-        <!-- Confetti Canvas -->
-        <canvas id="confetti-canvas"></canvas>
-        
-        <!-- Heartbeat Pulse Overlay -->
-        <div id="heartbeat-overlay"></div>
+    <!-- Background Layers -->
+    <div id="bg-layer" class="absolute inset-0 overflow-hidden pointer-events-none">
+        <!-- Clouds/Stars/Rain injected here -->
+    </div>
+    
+    <!-- Heartbeat & Confetti Layers -->
+    <div id="heartbeat-overlay"></div>
+    <canvas id="confetti-canvas"></canvas>
 
-        <div class="relative p-6 sm:p-8 z-10">
-            <!-- Header & Theme Selector -->
-            <div class="flex justify-between items-start mb-4">
-                <div class="text-left">
-                    <h1 class="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-rose-600 mb-1">
-                        Love Garden
-                    </h1>
-                    <p class="text-pink-400 text-xs font-bold uppercase tracking-widest">Co-op Collection Game</p>
-                </div>
-                <div class="flex flex-col gap-1 items-end">
-                    <div class="flex gap-2 mb-1">
-                        <!-- Ambience Selector -->
-                        <select id="ambience-selector" onchange="changeAmbience(this.value)" class="text-xs border border-pink-200 rounded-lg p-1 bg-white/50 focus:outline-none text-blue-600 font-bold" title="Ambient Sound">
-                            <option value="none">🔇 Off</option>
-                            <option value="rain">🌧️ Rain</option>
-                            <option value="birds">🐦 Forest</option>
-                            <option value="ocean">🌊 Ocean</option>
-                        </select>
-                        
-                        <!-- Theme Selector -->
-                        <select id="theme-selector" onchange="changeTheme(this.value)" class="text-xs border border-pink-200 rounded-lg p-1 bg-white/50 focus:outline-none text-pink-600 font-bold">
-                            <option value="theme-day">☀️ Day</option>
-                            <option value="theme-night">🌙 Night</option>
-                            <option value="theme-sunset">🌅 Sunset</option>
-                        </select>
-                    </div>
-                    <!-- Settings Buttons -->
-                    <div class="flex gap-2">
-                        <!-- Notifications Toggle -->
-                        <button id="notify-btn" onclick="requestNotificationPermission()" class="hidden text-[10px] text-gray-400 hover:text-green-500 underline transition">Enable Notifications</button>
-                        <button id="logout-btn" onclick="handleLogout()" class="hidden text-[10px] text-gray-400 hover:text-red-500 underline transition">Log Out</button>
-                    </div>
+    <!-- Gift Overlay (Hidden by default) -->
+    <div id="gift-overlay" class="hidden flex flex-col items-center justify-center cursor-pointer" onclick="openGift()">
+        <div class="gift-box">🎁</div>
+        <p class="text-white mt-4 font-bold animate-pulse">You have new flowers! (Tap to open)</p>
+    </div>
+
+    <!-- MAIN APP CONTAINER -->
+    <div id="app-container" class="relative z-10 flex flex-col h-full min-h-screen">
+        
+        <!-- Header -->
+        <div class="flex justify-between items-center p-4 pt-8 glass-panel rounded-b-3xl mx-2 mt-2">
+            <div>
+                <h1 class="text-2xl font-extrabold tracking-tight">Love Garden</h1>
+                <div class="flex items-center gap-2 text-xs opacity-70">
+                    <span id="petals-count" class="font-bold">0</span> 🪙 Petals
                 </div>
             </div>
-
-            <!-- VIEW 0: Loading Screen (Visible by Default) -->
-            <div id="view-loading" class="animate-fade-in text-center py-16 flex flex-col items-center justify-center">
-                <div class="animate-spin rounded-full h-12 w-12 border-4 border-t-4 border-pink-200 border-t-pink-500 mb-4"></div>
-                <h2 class="text-xl font-bold text-gray-700">Initializing Love Garden...</h2>
-                <p class="text-xs text-gray-500 mt-2">Connecting to Firebase securely.</p>
+            <div class="flex items-center gap-2">
+                <!-- Settings/Ambience Dropdown -->
+                <select id="ambience-selector" onchange="changeAmbience(this.value)" class="bg-white/20 border border-white/30 rounded-lg p-1 text-xs focus:outline-none backdrop-blur-sm">
+                    <option value="none">🔇 Off</option>
+                    <option value="rain">🌧️ Rain</option>
+                    <option value="birds">🐦 Forest</option>
+                    <option value="ocean">🌊 Ocean</option>
+                </select>
+                <button onclick="disconnectPartner()" class="text-xs opacity-50 hover:opacity-100">⚙️</button>
             </div>
+        </div>
 
-            <!-- VIEW 1: Auth Screen (Login/Signup) -->
-            <div id="view-auth" class="hidden animate-fade-in text-center py-6">
-                <div id="auth-form-container" class="bg-white/60 backdrop-blur-sm rounded-2xl p-6 border border-pink-100 shadow-sm">
-                    <h2 id="auth-title" class="text-xl font-bold text-pink-600 mb-4">Welcome Back</h2>
-                    
-                    <input type="email" id="auth-email" placeholder="Email" class="w-full p-3 mb-3 rounded-xl border border-pink-200 bg-white/80 focus:ring-2 focus:ring-pink-300 outline-none text-sm">
-                    <input type="password" id="auth-password" placeholder="Password" class="w-full p-3 mb-4 rounded-xl border border-pink-200 bg-white/80 focus:ring-2 focus:ring-pink-300 outline-none text-sm">
-                    
-                    <button id="auth-action-btn" onclick="handleAuthAction()" class="w-full py-3 bg-pink-500 text-white rounded-xl font-bold hover:bg-pink-600 transition shadow-md mb-4">
-                        Log In
-                    </button>
-                    
-                    <p class="text-xs text-gray-500">
-                        <span id="auth-toggle-text">New here?</span> 
-                        <button onclick="toggleAuthMode()" class="text-pink-600 font-bold underline ml-1" id="auth-toggle-btn">Create Account</button>
-                    </p>
-                    <div id="auth-error" class="hidden mt-3 text-xs text-red-500 bg-red-50 p-2 rounded"></div>
-                </div>
-                <p class="text-[10px] text-gray-400 mt-6 max-w-xs mx-auto">
-                    Note: You must enable "Email/Password" in your Firebase Console for this to work.
+        <!-- AUTH SCREEN -->
+        <div id="view-auth" class="hidden flex-grow flex flex-col items-center justify-center p-6">
+            <div class="glass-panel p-8 rounded-3xl w-full max-w-sm text-center">
+                <h2 id="auth-title" class="text-2xl font-bold mb-6 text-pink-500">Welcome</h2>
+                <input type="email" id="auth-email" placeholder="Email" class="w-full p-4 mb-3 rounded-2xl bg-white/50 border-none focus:ring-2 focus:ring-pink-400 outline-none text-gray-800">
+                <input type="password" id="auth-password" placeholder="Password" class="w-full p-4 mb-6 rounded-2xl bg-white/50 border-none focus:ring-2 focus:ring-pink-400 outline-none text-gray-800">
+                <button onclick="handleAuthAction()" class="w-full py-4 bg-pink-500 text-white rounded-2xl font-bold shadow-lg juicy-btn mb-4">Log In</button>
+                <p class="text-sm opacity-60">
+                    <button onclick="toggleAuthMode()" id="auth-toggle-btn" class="underline">Create Account</button>
                 </p>
+                <div id="auth-error" class="hidden mt-4 text-xs text-red-500 bg-red-100 p-2 rounded-lg"></div>
             </div>
+        </div>
 
-            <!-- VIEW 2: App Interface (Hidden by default) -->
-            <div id="view-app" class="hidden animate-fade-in">
+        <!-- CONNECTION SCREEN -->
+        <div id="view-connection" class="hidden flex-grow flex flex-col items-center justify-center p-6">
+            <div class="glass-panel p-8 rounded-3xl w-full max-w-sm text-center">
+                <h2 class="text-xl font-bold mb-2">Connect Partners</h2>
+                <div class="bg-white/40 p-3 rounded-xl mb-4 text-xs font-mono break-all select-all" id="my-id">...</div>
+                <button onclick="copyMyId()" class="text-xs bg-white/50 px-3 py-1 rounded-full mb-6">Copy My ID</button>
                 
-                <!-- Section: My ID -->
-                <div class="bg-white/60 backdrop-blur-sm rounded-2xl p-4 mb-6 border border-pink-100 shadow-sm">
-                    <div class="flex justify-between items-center mb-2">
-                         <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider">My Player ID</label>
-                         <span class="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold uppercase hidden" id="status-badge">Online</span>
+                <input type="text" id="partner-id-input" placeholder="Paste Partner ID" class="w-full p-4 mb-4 rounded-2xl bg-white/50 border-none outline-none text-center">
+                <button onclick="connectToPartner()" class="w-full py-4 bg-green-500 text-white rounded-2xl font-bold shadow-lg juicy-btn">Connect</button>
+            </div>
+        </div>
+
+        <!-- MAIN GAME VIEW -->
+        <div id="view-game" class="hidden flex-grow relative">
+            
+            <!-- GARDEN TAB (Organic Layout) -->
+            <div id="tab-garden-content" class="absolute inset-0">
+                <!-- Sky decorations (purchased) -->
+                <div id="sky-layer" class="absolute top-20 w-full flex justify-center gap-4 z-0 pointer-events-none opacity-80"></div>
+                
+                <!-- The actual organic garden -->
+                <div id="garden-container">
+                    <div class="ground-overlay"></div>
+                    <!-- Flowers injected here via JS -->
+                </div>
+
+                <!-- Controls Container (Floating above bottom nav) -->
+                <div class="absolute bottom-24 w-full px-6 flex flex-col gap-3 z-20">
+                    <!-- Status Bubble -->
+                    <div id="status-display" class="bg-white/80 backdrop-blur-md rounded-2xl p-3 text-center text-xs shadow-sm min-h-[3rem] flex flex-col justify-center">
+                        Welcome to the garden!
                     </div>
+                    
+                    <!-- Input & Actions -->
                     <div class="flex gap-2">
-                        <div class="relative flex-grow">
-                            <input type="text" id="my-id" readonly 
-                                class="w-full bg-gray-50 text-gray-600 text-sm font-mono p-3 rounded-xl border border-gray-200 outline-none select-all"
-                                value="...">
-                        </div>
-                        <button onclick="copyMyId()" class="bg-gray-100 hover:bg-gray-200 text-gray-600 px-4 rounded-xl font-medium text-sm transition action-button">
-                            Copy
-                        </button>
+                        <input type="text" id="love-note" placeholder="Write a note..." class="flex-grow p-4 rounded-2xl bg-white/90 border-none shadow-sm focus:ring-2 focus:ring-pink-300 outline-none">
+                        <button onclick="sendHeartbeat()" class="w-14 bg-red-100 text-red-500 rounded-2xl shadow-md juicy-btn flex items-center justify-center text-xl">❤️</button>
                     </div>
-                    <p id="copy-feedback" class="text-green-500 text-xs mt-2 hidden text-center font-medium">Copied to clipboard!</p>
+                    <button onclick="sendFlower()" class="w-full py-4 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-2xl font-bold shadow-lg juicy-btn">
+                        Plant Flower 🌸
+                    </button>
                 </div>
-
-                <!-- Section: Partner Connection -->
-                <div id="connection-section" class="mb-8">
-                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Partner's ID</label>
-                    <div class="flex gap-2">
-                        <input type="text" id="partner-id-input" placeholder="Paste their ID here" 
-                            class="interactive-input w-full bg-white text-gray-800 text-sm p-3 rounded-xl border border-pink-200 focus:border-pink-400 focus:ring-2 focus:ring-pink-100 outline-none shadow-sm placeholder-gray-300">
-                        <button onclick="connectToPartner()" class="bg-pink-500 hover:bg-pink-600 text-white px-6 rounded-xl font-bold shadow-lg shadow-pink-200 transition action-button">
-                            Start Game
-                        </button>
-                    </div>
-                </div>
-
-                <!-- GAME CONTAINER (Hidden until connected) -->
-                <div id="game-container" class="hidden">
-
-                    <!-- Stats Bar -->
-                    <div class="flex justify-between items-center mb-4 px-2">
-                        <div class="text-sm font-bold text-gray-600">
-                            Flowers: <span id="counter" class="text-pink-600">0</span>
-                        </div>
-                        <div class="text-sm font-bold text-gray-600">
-                            Petals: <span id="petals-count" class="text-yellow-600">0</span> 🪙
-                        </div>
-                    </div>
-
-                    <!-- Navigation Tabs -->
-                    <div class="flex border-b border-pink-200 mb-4">
-                        <button onclick="switchTab('garden')" id="tab-garden" class="tab-btn active flex-1 py-2 text-sm text-gray-600 hover:text-pink-600 transition">Garden</button>
-                        <button onclick="switchTab('shop')" id="tab-shop" class="tab-btn flex-1 py-2 text-sm text-gray-600 hover:text-pink-600 transition">Shop</button>
-                        <button onclick="switchTab('daily')" id="tab-daily" class="tab-btn flex-1 py-2 text-sm text-gray-600 hover:text-pink-600 transition">Daily Q</button>
-                    </div>
-
-                    <!-- TAB: GARDEN -->
-                    <div id="view-garden" class="animate-fade-in">
-                        
-                        <!-- Progress & Water -->
-                        <div class="mb-4 flex items-end gap-3">
-                            <div class="flex-grow">
-                                <div class="flex justify-between text-xs font-bold text-gray-500 mb-1">
-                                    <span>Level <span id="current-level">1</span></span>
-                                    <span id="next-unlock-text">Next: Rose</span>
-                                </div>
-                                <div class="h-4 w-full bg-gray-200 rounded-full overflow-hidden relative">
-                                    <div id="progress-bar" class="h-full bg-gradient-to-r from-pink-400 to-rose-500 progress-strip transition-all duration-500" style="width: 0%"></div>
-                                </div>
-                            </div>
-                            <!-- Watering Can Button -->
-                            <div class="flex flex-col items-center">
-                                <button id="water-btn" onclick="waterGarden()" class="w-10 h-10 rounded-full bg-blue-100 text-blue-500 flex items-center justify-center hover:bg-blue-200 transition disabled:opacity-50 disabled:cursor-not-allowed relative" title="Water for +10 flowers!">
-                                    💧
-                                    <span id="water-badge" class="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-ping hidden"></span>
-                                </button>
-                                <span class="text-[9px] text-gray-400 mt-1">Water</span>
-                            </div>
-                        </div>
-
-                        <!-- Decoration Scene (Above the grid) -->
-                        <div id="scene-display" class="scene-container border-b border-pink-100 pb-2 mb-2">
-                            <!-- Decorations appear here -->
-                        </div>
-
-                        <!-- The Flower Grid -->
-                        <div class="bg-white/50 backdrop-blur-sm rounded-2xl p-4 border border-pink-100 shadow-inner mb-6">
-                            <div id="garden-grid" class="flex flex-wrap justify-center gap-4 text-3xl">
-                                <!-- Items injected by JS -->
-                            </div>
-                        </div>
-
-                        <!-- Controls: Note & Button -->
-                        <div class="flex flex-col gap-3">
-                            <input type="text" id="love-note" placeholder="Attach a message... (Optional)" maxlength="60" 
-                                class="w-full bg-white/80 text-gray-700 text-sm p-3 rounded-xl border border-pink-100 focus:border-pink-300 outline-none text-center">
-                            
-                            <div class="flex gap-2">
-                                <button onclick="sendHeartbeat()" class="w-16 py-4 bg-red-100 text-red-500 rounded-2xl font-bold text-2xl shadow-xl shadow-red-100 hover:shadow-red-200 transform transition hover:-translate-y-1 active:scale-95 flex items-center justify-center relative group" title="Send Heartbeat">
-                                    <span class="group-hover:animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-20"></span>
-                                    ❤️
-                                </button>
-                                <button onclick="sendFlower()" class="flex-grow py-4 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-2xl font-bold text-lg shadow-xl shadow-pink-200 hover:shadow-pink-300 transform transition hover:-translate-y-1 float-hover active:scale-95 flex items-center justify-center gap-2">
-                                    <span class="flower-icon">✨</span> Plant Flower
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Message Log (New Feature) -->
-                        <div class="mt-6">
-                            <h4 class="text-xs font-bold text-gray-400 uppercase mb-3 text-center tracking-widest">Love Notes History</h4>
-                            <div id="message-log" class="flex flex-col h-48 overflow-y-auto p-2 bg-white/40 rounded-xl border border-pink-50 custom-scrollbar shadow-inner">
-                                <!-- Messages injected here -->
-                                <div class="text-center text-xs text-gray-400 italic mt-4">No notes yet... send one!</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- TAB: SHOP -->
-                    <div id="view-shop" class="hidden animate-fade-in">
-                        <div class="text-center mb-4">
-                            <h3 class="text-lg font-bold text-gray-700">Garden Decor Shop</h3>
-                            <p class="text-xs text-gray-500">Spend petals to beautify your shared space!</p>
-                        </div>
-                        <div id="shop-grid" class="grid grid-cols-2 gap-4">
-                            <!-- Shop items injected here -->
-                        </div>
-                    </div>
-
-                    <!-- TAB: DAILY Q -->
-                    <div id="view-daily" class="hidden animate-fade-in">
-                        <div class="bg-white/60 p-6 rounded-2xl border border-pink-200 shadow-sm text-center">
-                            <div class="inline-block bg-pink-100 text-pink-600 px-3 py-1 rounded-full text-xs font-bold mb-4">
-                                Daily Connection
-                            </div>
-                            <h3 id="daily-question-text" class="text-lg font-bold text-gray-800 mb-6 italic">
-                                Loading question...
-                            </h3>
-                            
-                            <!-- Input Area -->
-                            <div id="daily-input-area">
-                                <textarea id="daily-answer-input" rows="3" placeholder="Type your answer here..." class="w-full p-3 rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-pink-300 outline-none mb-4"></textarea>
-                                <button onclick="submitDailyAnswer()" class="w-full py-3 bg-pink-500 text-white rounded-xl font-bold hover:bg-pink-600 transition">
-                                    Submit Answer
-                                </button>
-                            </div>
-
-                            <!-- Waiting / Result Area -->
-                            <div id="daily-result-area" class="hidden mt-4">
-                                <div id="daily-status-msg" class="text-sm font-bold text-gray-600 mb-4"></div>
-                                <div id="partner-answer-display" class="hidden bg-yellow-50 p-4 rounded-xl border border-yellow-200 text-left">
-                                    <p class="text-xs text-gray-400 uppercase font-bold mb-1">Partner's Answer:</p>
-                                    <p id="partner-answer-text" class="text-gray-800 italic">...</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
-
             </div>
 
-            <!-- Error Display -->
-            <div id="error-banner" class="hidden mt-6 bg-red-50 border border-red-100 text-red-500 p-4 rounded-xl text-sm text-center"></div>
+            <!-- MEMORY TAB -->
+            <div id="tab-memory-content" class="hidden absolute inset-0 p-4 overflow-y-auto pb-32">
+                <h3 class="text-center font-bold opacity-50 mb-4 uppercase tracking-widest text-xs">Memory Wall</h3>
+                <div id="memory-wall" class="flex flex-col items-center">
+                    <!-- Polaroids injected here -->
+                </div>
+            </div>
 
-            <!-- Level Up Modal (Overlay) -->
-            <div id="levelup-overlay" class="hidden absolute inset-0 bg-white/90 z-50 flex flex-col items-center justify-center text-center p-8 backdrop-blur-sm level-up-modal">
-                <div class="text-6xl mb-4 animate-bounce" id="levelup-icon">🎁</div>
-                <h2 class="text-2xl font-extrabold text-pink-600 mb-2">New Flower Unlocked!</h2>
-                <p class="text-gray-600 mb-6">You and your partner discovered the <span id="levelup-name" class="font-bold">Rose</span>!</p>
-                <button onclick="closeLevelUp()" class="bg-pink-500 text-white px-8 py-3 rounded-full font-bold shadow-lg hover:bg-pink-600 transition">Awesome!</button>
+            <!-- SHOP TAB -->
+            <div id="tab-shop-content" class="hidden absolute inset-0 p-4 overflow-y-auto pb-32">
+                <h3 class="text-center font-bold opacity-50 mb-4 uppercase tracking-widest text-xs">Garden Shop</h3>
+                <div id="shop-grid" class="grid grid-cols-2 gap-4"></div>
+            </div>
+
+            <!-- DAILY TAB -->
+            <div id="tab-daily-content" class="hidden absolute inset-0 p-6 flex flex-col items-center justify-center">
+                <div class="glass-panel p-6 rounded-3xl w-full text-center">
+                    <div class="inline-block bg-pink-100 text-pink-600 px-3 py-1 rounded-full text-xs font-bold mb-4">Daily Question</div>
+                    <h3 id="daily-question-text" class="text-lg font-bold mb-6">Loading...</h3>
+                    
+                    <div id="daily-input-area">
+                        <textarea id="daily-answer-input" rows="3" placeholder="Answer here..." class="w-full p-3 rounded-xl bg-white/50 mb-4 outline-none"></textarea>
+                        <button onclick="submitDailyAnswer()" class="w-full py-3 bg-pink-500 text-white rounded-xl font-bold juicy-btn">Submit</button>
+                    </div>
+                    
+                    <div id="daily-result-area" class="hidden">
+                        <div id="daily-status-msg" class="text-sm font-bold text-green-600 mb-4"></div>
+                        <div id="partner-answer-display" class="hidden bg-yellow-50/80 p-4 rounded-xl text-left">
+                            <p class="text-xs opacity-50 uppercase font-bold mb-1">Partner said:</p>
+                            <p id="partner-answer-text" class="italic">...</p>
+                        </div>
+                    </div>
+                </div>
             </div>
 
         </div>
-    </main>
 
-    <!-- FIREBASE SETUP -->
+        <!-- BOTTOM NAVIGATION -->
+        <div id="bottom-nav" class="bottom-nav glass-panel hidden">
+            <button onclick="switchTab('garden')" id="nav-garden" class="nav-btn active text-pink-500">🌺</button>
+            <button onclick="switchTab('memory')" id="nav-memory" class="nav-btn text-gray-500">📸</button>
+            <button onclick="switchTab('shop')" id="nav-shop" class="nav-btn text-gray-500">🛒</button>
+            <button onclick="switchTab('daily')" id="nav-daily" class="nav-btn text-gray-500">📅</button>
+        </div>
+
+        <!-- VIEW 0: Loading Screen (Visible by Default) -->
+        <div id="view-loading" class="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center animate-fade-in">
+            <div class="animate-spin rounded-full h-12 w-12 border-4 border-t-4 border-pink-200 border-t-pink-500 mb-4"></div>
+            <h2 class="text-xl font-bold text-gray-700">Initializing Love Garden...</h2>
+            <p class="text-xs text-gray-500 mt-2">Connecting to cloud...</p>
+        </div>
+
+    </div>
+
+    <!-- FIREBASE & APP LOGIC -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        // Import Email/Password Auth Providers
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, onSnapshot, setDoc, getDoc, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, onSnapshot, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // ==========================================
-        // --- CONFIGURATION START ---
-        // ==========================================
-        
-        // This is your specific configuration:
+        // CONFIGURATION
         const manualConfig = {
             apiKey: "AIzaSyBEA9tEwiCr__ohGhTqEZ7dbfmjgRMh1D8",
             authDomain: "flower-exchange-423b6.firebaseapp.com",
@@ -497,1049 +311,536 @@
             appId: "1:312133979500:web:0f70ff976e7b9a1c59b749"
         };
 
-        // ==========================================
-        // --- CONFIGURATION END ---
-        // ==========================================
+        const firebaseConfig = (typeof __firebase_config !== 'undefined') ? JSON.parse(__firebase_config) : manualConfig;
+        const collectionPath = (typeof __app_id !== 'undefined') ? `artifacts/${__app_id}/public/data/flower_exchanges` : "flower_exchanges";
 
-        let firebaseConfig;
-        let collectionPath;
-
-        if (typeof __firebase_config !== 'undefined') {
-            firebaseConfig = JSON.parse(__firebase_config);
-            collectionPath = `artifacts/${__app_id}/public/data/flower_exchanges`;
-        } else {
-            firebaseConfig = manualConfig;
-            collectionPath = "flower_exchanges"; 
-        }
-
-        // --- APP STATE ---
-        let db;
-        let auth;
-        let myId = null;
-        let partnerId = null;
-        let unsubscribeListener = null;
-        let localCount = 0; 
-        let petals = 0;
-        let inventory = [];
-        let isSignupMode = false;
-        let isFirstLoad = true; // To prevent level up on refresh
-        let lastProcessedHeartbeat = 0;
+        // STATE
+        let db, auth, myId, partnerId, unsubscribeListener;
+        let petals = 0, inventory = [], lastProcessedHeartbeat = 0, lastFlowerCount = 0;
+        let isSignupMode = false, isAmbiencePlaying = false;
+        let audioCtx, ambienceGainNode, ambienceSource, birdInterval, currentAmbienceType = 'none';
         
-        // Ambient Sound State
-        let isAmbiencePlaying = false;
-        let ambienceGainNode = null;
-        let ambienceSource = null;
-        let birdInterval = null;
-        let currentAmbienceType = 'none';
+        // DOM REFERENCES CONTAINER
+        let els = {}; 
 
-        // --- GAME DATA ---
-        const GAME_LEVELS = [
-            { count: 0,   emoji: '🌸', name: 'Cherry Blossom' },
-            { count: 10,  emoji: '🌹', name: 'Red Rose' },
-            { count: 25,  emoji: '🌻', name: 'Sunflower' },
-            { count: 50,  emoji: '🌷', name: 'Tulip' },
-            { count: 75,  emoji: '🌺', name: 'Hibiscus' },
-            { count: 100, emoji: '💐', name: 'Grand Bouquet' },
-            { count: 150, emoji: '🪴', name: 'Potted Plant' },
-            { count: 200, emoji: '🐝', name: 'Garden Bee' },
-            { count: 300, emoji: '💖', name: 'Pure Love' },
-            { count: 500, emoji: '💎', name: 'Diamond' },
-            { count: 1000, emoji: '👑', name: 'Royal Crown' }
-        ];
-
+        // DATA CONSTANTS
         const SHOP_ITEMS = [
-            { id: 'bench', name: 'Park Bench', icon: '🪑', price: 50 },
+            { id: 'bench', name: 'Bench', icon: '🪑', price: 50 },
             { id: 'fountain', name: 'Fountain', icon: '⛲', price: 100 },
-            { id: 'bird', name: 'Bluebird', icon: '🐦', price: 30 },
-            { id: 'tree', name: 'Oak Tree', icon: '🌳', price: 75 },
-            { id: 'cottage', name: 'Cozy Cottage', icon: '🏠', price: 300 },
-            { id: 'cat', name: 'Garden Cat', icon: '🐈', price: 60 },
-            { id: 'lamp', name: 'Street Lamp', icon: '🏮', price: 40 },
+            { id: 'tree', name: 'Tree', icon: '🌳', price: 75 },
+            { id: 'cottage', name: 'Cottage', icon: '🏠', price: 300 },
+            { id: 'bird', name: 'Bird', icon: '🐦', price: 30 },
+            { id: 'cat', name: 'Cat', icon: '🐈', price: 60 },
+            { id: 'lamp', name: 'Lamp', icon: '🏮', price: 40 },
             { id: 'rainbow', name: 'Rainbow', icon: '🌈', price: 150 }
         ];
-
+        
         const DAILY_QUESTIONS = [
-            "What was the highlight of your day?",
-            "What is your favorite memory of us?",
-            "What is one thing you are grateful for today?",
-            "What movie do you want to watch next?",
-            "What is your dream vacation spot?",
-            "What is a meal you'd love to eat right now?",
-            "If we could teleport anywhere, where would we go?",
-            "What is something I do that makes you smile?",
-            "What is your favorite song right now?",
-            "Describe our relationship in one word."
+            "What was the highlight of your day?", "Favorite memory of us?", "One thing you're grateful for?",
+            "Movie you want to watch?", "Dream vacation?", "Meal you'd love right now?",
+            "Teleport anywhere, where?", "Something I do that makes you smile?", "Song on repeat?", "Us in one word."
         ];
 
-        // UI References
-        const viewLoading = document.getElementById('view-loading');
-        const viewAuth = document.getElementById('view-auth');
-        const viewApp = document.getElementById('view-app');
-        const gameContainer = document.getElementById('game-container');
-        const myIdInput = document.getElementById('my-id');
-        const connectionSection = document.getElementById('connection-section');
-        const statusDisplay = document.getElementById('status-display');
-        const counterDisplay = document.getElementById('counter');
-        const petalsDisplay = document.getElementById('petals-count');
-        const errorBanner = document.getElementById('error-banner');
-        const noteInput = document.getElementById('love-note');
-        const waterBtn = document.getElementById('water-btn');
-        const waterBadge = document.getElementById('water-badge');
-        // const changePartnerBtn = document.getElementById('change-partner-btn'); // REMOVED
-        const logoutBtn = document.getElementById('logout-btn');
-        const notifyBtn = document.getElementById('notify-btn'); // NEW
-        const themeSelector = document.getElementById('theme-selector');
-        const ambienceSelector = document.getElementById('ambience-selector');
-        
-        // Auth UI Refs
-        const authTitle = document.getElementById('auth-title');
-        const authActionBtn = document.getElementById('auth-action-btn');
-        const authToggleText = document.getElementById('auth-toggle-text');
-        const authToggleBtn = document.getElementById('auth-toggle-btn');
-        const authError = document.getElementById('auth-error');
-        
-        // Game UI Refs
-        const progressBar = document.getElementById('progress-bar');
-        const currentLevelSpan = document.getElementById('current-level');
-        const nextUnlockText = document.getElementById('next-unlock-text');
-        const gardenGrid = document.getElementById('garden-grid');
-        const sceneDisplay = document.getElementById('scene-display');
-        const shopGrid = document.getElementById('shop-grid');
-        const messageLog = document.getElementById('message-log');
-        const levelUpOverlay = document.getElementById('levelup-overlay');
-        const levelUpIcon = document.getElementById('levelup-icon');
-        const levelUpName = document.getElementById('levelup-name');
-        const heartbeatOverlay = document.getElementById('heartbeat-overlay');
-        
-        // Daily Q UI Refs
-        const dailyQuestionText = document.getElementById('daily-question-text');
-        const dailyInputArea = document.getElementById('daily-input-area');
-        const dailyAnswerInput = document.getElementById('daily-answer-input');
-        const dailyResultArea = document.getElementById('daily-result-area');
-        const dailyStatusMsg = document.getElementById('daily-status-msg');
-        const partnerAnswerDisplay = document.getElementById('partner-answer-display');
-        const partnerAnswerText = document.getElementById('partner-answer-text');
-
-        // --- CONFETTI ENGINE ---
-        const canvas = document.getElementById('confetti-canvas');
-        const ctx = canvas.getContext('2d');
-        let particles = [];
-        let animationId;
-
-        function resizeCanvas() {
-            canvas.width = canvas.parentElement.offsetWidth;
-            canvas.height = canvas.parentElement.offsetHeight;
-        }
-        window.addEventListener('resize', resizeCanvas);
-
-        class Particle {
-            constructor() {
-                this.x = canvas.width / 2;
-                this.y = canvas.height / 2;
-                this.vx = (Math.random() - 0.5) * 10;
-                this.vy = (Math.random() - 0.5) * 10;
-                this.size = Math.random() * 5 + 2;
-                this.color = `hsl(${Math.random() * 360}, 100%, 50%)`;
-                this.life = 100;
-            }
-            update() {
-                this.x += this.vx;
-                this.y += this.vy;
-                this.vy += 0.2; // Gravity
-                this.life--;
-            }
-            draw() {
-                ctx.fillStyle = this.color;
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-                ctx.fill();
-            }
-        }
-
-        function startConfetti() {
-            resizeCanvas();
-            particles = [];
-            for (let i = 0; i < 100; i++) particles.push(new Particle());
-            if (animationId) cancelAnimationFrame(animationId);
-            animateConfetti();
-        }
-
-        function animateConfetti() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            particles.forEach((p, index) => {
-                p.update();
-                p.draw();
-                if (p.life <= 0) particles.splice(index, 1);
-            });
-            if (particles.length > 0) {
-                animationId = requestAnimationFrame(animateConfetti);
-            }
-        }
-
-        // --- SOUND ENGINE (Web Audio API) ---
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        
-        function playTone(freq, type, duration, delay = 0) {
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.type = type;
-            osc.frequency.setValueAtTime(freq, audioCtx.currentTime + delay);
-            gain.gain.setValueAtTime(0.1, audioCtx.currentTime + delay);
-            gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + delay + duration);
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            osc.start(audioCtx.currentTime + delay);
-            osc.stop(audioCtx.currentTime + delay + duration);
-        }
-
-        function playSound(type) {
-            if (type === 'send') {
-                playTone(440, 'sine', 0.5); // A4
-                playTone(554, 'sine', 0.5, 0.1); // C#5
-            } else if (type === 'receive') {
-                playTone(554, 'sine', 0.6); // C#5
-                playTone(659, 'sine', 0.6, 0.15); // E5
-            } else if (type === 'water') {
-                playTone(300, 'triangle', 0.3);
-                playTone(400, 'triangle', 0.3, 0.1);
-                playTone(500, 'triangle', 0.4, 0.2);
-            } else if (type === 'shiny') {
-                playTone(880, 'sine', 0.8, 0.0);
-                playTone(1108, 'sine', 0.8, 0.1);
-                playTone(1318, 'sine', 1.0, 0.2);
-            } else if (type === 'levelup') {
-                playTone(523, 'sine', 0.2, 0);
-                playTone(659, 'sine', 0.2, 0.1);
-                playTone(783, 'sine', 0.2, 0.2);
-                playTone(1046, 'sine', 0.6, 0.3);
-            } else if (type === 'buy') {
-                playTone(600, 'square', 0.1);
-                playTone(800, 'square', 0.1, 0.1);
-            } else if (type === 'heartbeat') {
-                // Low thump sound
-                playTone(100, 'triangle', 0.1, 0);
-                playTone(80, 'triangle', 0.15, 0.2);
-            }
-        }
-        
-        // --- AMBIENT SOUND GENERATOR ---
-        
-        // Helpers
-        function createPinkNoise() {
-            const bufferSize = 2 * audioCtx.sampleRate;
-            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-            const output = buffer.getChannelData(0);
-            let b0, b1, b2, b3, b4, b5, b6;
-            b0 = b1 = b2 = b3 = b4 = b5 = b6 = 0.0;
-            for (let i = 0; i < bufferSize; i++) {
-                const white = Math.random() * 2 - 1;
-                b0 = 0.99886 * b0 + white * 0.0555179;
-                b1 = 0.99332 * b1 + white * 0.0750759;
-                b2 = 0.96900 * b2 + white * 0.1538520;
-                b3 = 0.86650 * b3 + white * 0.3104856;
-                b4 = 0.55000 * b4 + white * 0.5329522;
-                b5 = -0.7616 * b5 - white * 0.0168980;
-                output[i] = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362;
-                output[i] *= 0.11; 
-                b6 = white * 0.115926;
-            }
-            return buffer;
-        }
-
-        function playBirdChirp() {
-            if (!isAmbiencePlaying || currentAmbienceType !== 'birds') return;
-            const now = audioCtx.currentTime;
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            
-            // Randomize pitch and duration
-            const freq = 2000 + Math.random() * 1500;
-            const dur = 0.1 + Math.random() * 0.1;
-            
-            osc.frequency.setValueAtTime(freq, now);
-            // Slide pitch slightly
-            osc.frequency.linearRampToValueAtTime(freq - 500, now + dur);
-            
-            gain.gain.setValueAtTime(0, now);
-            gain.gain.linearRampToValueAtTime(0.05, now + 0.02);
-            gain.gain.linearRampToValueAtTime(0, now + dur);
-            
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            osc.start(now);
-            osc.stop(now + dur);
-        }
-
-        // Logic
-        window.changeAmbience = function(type) {
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-            
-            stopAmbience();
-            currentAmbienceType = type;
-            
-            if (type === 'none') {
-                isAmbiencePlaying = false;
-                return;
-            }
-            
-            isAmbiencePlaying = true;
-            
-            if (type === 'rain') startRain();
-            else if (type === 'ocean') startOcean();
-            else if (type === 'birds') startForest();
-        }
-        
-        function stopAmbience() {
-            if (ambienceGainNode) {
-                const node = ambienceGainNode;
-                const source = ambienceSource;
-                // Fade out
-                try {
-                    node.gain.cancelScheduledValues(audioCtx.currentTime);
-                    node.gain.setValueAtTime(node.gain.value, audioCtx.currentTime);
-                    node.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
-                    setTimeout(() => {
-                        if (source) source.stop(); 
-                    }, 500);
-                } catch(e) {}
-            }
-            if (birdInterval) clearInterval(birdInterval);
-            ambienceGainNode = null;
-            ambienceSource = null;
-        }
-
-        function startRain() {
-            const bufferSize = 2 * audioCtx.sampleRate;
-            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-            const output = buffer.getChannelData(0);
-            let lastOut = 0;
-            for (let i = 0; i < bufferSize; i++) {
-                const white = Math.random() * 2 - 1;
-                output[i] = (lastOut + (0.02 * white)) / 1.02;
-                lastOut = output[i];
-                output[i] *= 3.5;
-            }
-
-            ambienceSource = audioCtx.createBufferSource();
-            ambienceSource.buffer = buffer;
-            ambienceSource.loop = true;
-
-            const filter = audioCtx.createBiquadFilter();
-            filter.type = 'lowpass';
-            filter.frequency.value = 800;
-
-            ambienceGainNode = audioCtx.createGain();
-            ambienceGainNode.gain.setValueAtTime(0.001, audioCtx.currentTime);
-            ambienceGainNode.gain.linearRampToValueAtTime(0.15, audioCtx.currentTime + 2);
-
-            ambienceSource.connect(filter);
-            filter.connect(ambienceGainNode);
-            ambienceGainNode.connect(audioCtx.destination);
-            ambienceSource.start();
-        }
-        
-        function startOcean() {
-            const buffer = createPinkNoise();
-            ambienceSource = audioCtx.createBufferSource();
-            ambienceSource.buffer = buffer;
-            ambienceSource.loop = true;
-            
-            // Ocean needs lowpass modulation
-            const filter = audioCtx.createBiquadFilter();
-            filter.type = 'lowpass';
-            filter.frequency.value = 400;
-            
-            // LFO for waves
-            const lfo = audioCtx.createOscillator();
-            lfo.type = 'sine';
-            lfo.frequency.value = 0.15; // Slow waves
-            
-            const lfoGain = audioCtx.createGain();
-            lfoGain.gain.value = 300; // Modulate freq by +/- 300
-            
-            lfo.connect(lfoGain);
-            lfoGain.connect(filter.frequency);
-            lfo.start();
-            
-            ambienceGainNode = audioCtx.createGain();
-            ambienceGainNode.gain.setValueAtTime(0.001, audioCtx.currentTime);
-            ambienceGainNode.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 3);
-            
-            ambienceSource.connect(filter);
-            filter.connect(ambienceGainNode);
-            ambienceGainNode.connect(audioCtx.destination);
-            ambienceSource.start();
-        }
-        
-        function startForest() {
-            // Wind base (soft pink noise)
-            const buffer = createPinkNoise();
-            ambienceSource = audioCtx.createBufferSource();
-            ambienceSource.buffer = buffer;
-            ambienceSource.loop = true;
-            
-            const filter = audioCtx.createBiquadFilter();
-            filter.type = 'lowpass';
-            filter.frequency.value = 300;
-            
-            ambienceGainNode = audioCtx.createGain();
-            ambienceGainNode.gain.setValueAtTime(0.001, audioCtx.currentTime);
-            ambienceGainNode.gain.linearRampToValueAtTime(0.08, audioCtx.currentTime + 2);
-            
-            ambienceSource.connect(filter);
-            filter.connect(ambienceGainNode);
-            ambienceGainNode.connect(audioCtx.destination);
-            ambienceSource.start();
-            
-            // Start bird intervals
-            birdInterval = setInterval(() => {
-                if (Math.random() > 0.6) playBirdChirp();
-            }, 3000);
-        }
-
-        // --- NOTIFICATION LOGIC ---
-        window.requestNotificationPermission = async function() {
-            if (!("Notification" in window)) {
-                alert("This browser does not support system notifications.");
-                return;
-            }
-            const permission = await Notification.requestPermission();
-            if (permission === "granted") {
-                notifyBtn.classList.add('hidden'); // Hide button if granted
-                // Test notification
-                new Notification("Notifications Enabled! 🌸", {
-                    body: "You will now be notified when you receive flowers.",
-                    icon: "icon.png"
-                });
-            }
-        }
-
-        function triggerSystemNotification(title, body) {
-            if (document.visibilityState === 'hidden' && Notification.permission === "granted") {
-                new Notification(title, {
-                    body: body,
-                    icon: "icon.png"
-                });
-            }
-        }
-
-        // --- INITIALIZATION ---
+        // --- INIT ---
         async function init() {
+            // Populate DOM refs here to avoid race conditions
+            els = {
+                loading: document.getElementById('view-loading'),
+                auth: document.getElementById('view-auth'),
+                conn: document.getElementById('view-connection'),
+                game: document.getElementById('view-game'),
+                nav: document.getElementById('bottom-nav'),
+                garden: document.getElementById('garden-container'),
+                sky: document.getElementById('sky-layer'),
+                bg: document.getElementById('bg-layer'),
+                myId: document.getElementById('my-id'),
+                partnerInput: document.getElementById('partner-id-input'),
+                status: document.getElementById('status-display'),
+                note: document.getElementById('love-note'),
+                gift: document.getElementById('gift-overlay'),
+                petals: document.getElementById('petals-count'),
+                heartbeat: document.getElementById('heartbeat-overlay'),
+                memoryWall: document.getElementById('memory-wall'),
+                shopGrid: document.getElementById('shop-grid'),
+                // Auth refs
+                authTitle: document.getElementById('auth-title'),
+                authBtn: document.getElementById('auth-action-btn'),
+                authToggleBtn: document.getElementById('auth-toggle-btn'),
+                authError: document.getElementById('auth-error'),
+                // Daily refs
+                dailyQ: document.getElementById('daily-question-text'),
+                dailyInput: document.getElementById('daily-input-area'),
+                dailyRes: document.getElementById('daily-result-area'),
+                dailyStatus: document.getElementById('daily-status-msg'),
+                partnerAnsDisplay: document.getElementById('partner-answer-display'),
+                partnerAnsText: document.getElementById('partner-answer-text'),
+                dailyInputText: document.getElementById('daily-answer-input')
+            };
+
             try {
                 // Restore theme
                 const savedTheme = localStorage.getItem('love_garden_theme');
                 if (savedTheme) {
-                    changeTheme(savedTheme);
-                    themeSelector.value = savedTheme;
-                }
-                
-                // Check notification permission to hide button
-                if (Notification.permission === "granted" || Notification.permission === "denied") {
-                    notifyBtn.classList.add('hidden');
+                    window.changeTheme(savedTheme);
+                    document.getElementById('theme-selector').value = savedTheme;
                 } else {
-                    notifyBtn.classList.remove('hidden');
+                    const hour = new Date().getHours();
+                    if (hour < 6 || hour > 19) window.changeTheme('theme-night');
+                    else if (hour > 17) window.changeTheme('theme-sunset');
                 }
 
-                setTimeout(() => {
-                    if (!viewLoading.classList.contains('hidden')) {
-                        // Keep loading screen up or show warning if taking too long
-                    }
-                }, 5000);
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
                 const app = initializeApp(firebaseConfig);
                 auth = getAuth(app);
-                
-                // Explicitly set persistence to LOCAL (survives browser close)
                 await setPersistence(auth, browserLocalPersistence);
-
                 db = getFirestore(app);
 
                 onAuthStateChanged(auth, (user) => {
-                    // Always hide loading first
-                    viewLoading.classList.add('hidden');
-                    
+                    els.loading.classList.add('hidden');
                     if (user) {
-                        // Logged In
                         myId = user.uid;
-                        myIdInput.value = myId;
-                        viewAuth.classList.add('hidden');
-                        viewApp.classList.remove('hidden');
-                        document.getElementById('status-badge').classList.remove('hidden');
-                        logoutBtn.classList.remove('hidden');
+                        els.myId.textContent = myId;
+                        els.auth.classList.add('hidden');
                         
-                        // Check for saved partner ID
-                        const savedPartnerId = localStorage.getItem('flower_partner_id');
-                        if (savedPartnerId) {
-                            partnerId = savedPartnerId;
-                            // Auto-start game UI
-                            connectionSection.classList.add('hidden');
-                            gameContainer.classList.remove('hidden');
-                            // changePartnerBtn.classList.remove('hidden'); // REMOVED
-                            
-                            renderGarden(0);
-                            setupRealtimeListener();
+                        const savedPartner = localStorage.getItem('flower_partner_id');
+                        if (savedPartner) {
+                            partnerId = savedPartner;
+                            showGame();
                         } else {
-                            // Show connection screen if no partner saved
-                            connectionSection.classList.remove('hidden');
+                            els.conn.classList.remove('hidden');
                         }
                     } else {
-                        // Not Logged In
-                        viewApp.classList.add('hidden');
-                        viewAuth.classList.remove('hidden');
-                        logoutBtn.classList.add('hidden');
+                        els.auth.classList.remove('hidden');
+                        els.conn.classList.add('hidden');
+                        els.game.classList.add('hidden');
+                        els.nav.classList.add('hidden');
                     }
                 });
-
-            } catch (error) {
-                showError(error.message);
-                viewLoading.classList.add('hidden');
+            } catch (e) { 
+                console.error(e);
+                // Fallback if elements not found, though init called on load should be fine
             }
         }
 
-        // --- AUTH LOGIC ---
-        
-        window.toggleAuthMode = function() {
+        function showGame() {
+            els.conn.classList.add('hidden');
+            els.game.classList.remove('hidden');
+            els.nav.classList.remove('hidden');
+            renderShop();
+            setupListener();
+        }
+
+        // --- AUTH ---
+        window.toggleAuthMode = () => {
             isSignupMode = !isSignupMode;
-            if (isSignupMode) {
-                authTitle.innerText = "Join the Garden";
-                authActionBtn.innerText = "Sign Up";
-                authToggleText.innerText = "Have an account?";
-                authToggleBtn.innerText = "Log In";
-            } else {
-                authTitle.innerText = "Welcome Back";
-                authActionBtn.innerText = "Log In";
-                authToggleText.innerText = "New here?";
-                authToggleBtn.innerText = "Create Account";
-            }
-            authError.classList.add('hidden');
-        }
+            els.authTitle.textContent = isSignupMode ? "Join" : "Welcome";
+            els.authBtn.textContent = isSignupMode ? "Sign Up" : "Log In";
+            els.authToggleBtn.textContent = isSignupMode ? "Log In" : "Create Account";
+            els.authError.classList.add('hidden');
+        };
 
-        window.handleAuthAction = async function() {
+        window.handleAuthAction = async () => {
             const email = document.getElementById('auth-email').value;
-            const password = document.getElementById('auth-password').value;
-            authError.classList.add('hidden');
-
-            if (!email || !password) {
-                authError.innerText = "Please fill in all fields.";
-                authError.classList.remove('hidden');
-                return;
-            }
-
+            const pass = document.getElementById('auth-password').value;
             try {
-                if (isSignupMode) {
-                    await createUserWithEmailAndPassword(auth, email, password);
-                } else {
-                    await signInWithEmailAndPassword(auth, email, password);
-                }
-            } catch (error) {
-                let msg = error.message;
-                if (error.code === 'auth/invalid-email') msg = "Invalid email address.";
-                if (error.code === 'auth/wrong-password') msg = "Incorrect password.";
-                if (error.code === 'auth/user-not-found') msg = "User not found.";
-                if (error.code === 'auth/email-already-in-use') msg = "Email already in use.";
-                if (error.code === 'auth/operation-not-allowed') msg = "Email/Password sign-in is not enabled in Firebase Console.";
-                
-                authError.innerText = msg;
-                authError.classList.remove('hidden');
-            }
-        }
-
-        window.handleLogout = async function() {
-            await signOut(auth);
-            disconnectPartner(); // Reset local game state
-        }
-
-
-        // --- CORE FUNCTIONS ---
-        
-        window.changeTheme = function(theme) {
-            document.body.className = `${theme} min-h-screen font-sans text-gray-800 flex items-center justify-center p-4 transition-colors duration-500`;
-            localStorage.setItem('love_garden_theme', theme);
-        }
-        
-        window.switchTab = function(tabName) {
-            // UI Toggle
-            ['garden', 'shop', 'daily'].forEach(t => {
-                document.getElementById(`view-${t}`).classList.add('hidden');
-                document.getElementById(`tab-${t}`).classList.remove('active');
-            });
-            document.getElementById(`view-${tabName}`).classList.remove('hidden');
-            document.getElementById(`tab-${tabName}`).classList.add('active');
-            
-            if (tabName === 'shop') renderShop();
-            if (tabName === 'daily') loadDailyQuestion();
-        }
-
-        window.connectToPartner = function() {
-            const input = document.getElementById('partner-id-input').value.trim();
-            if (!input) return showError("Please enter an ID.");
-            if (input === myId) return showError("You cannot connect to yourself!");
-
-            partnerId = input;
-            
-            // Save to localStorage
-            localStorage.setItem('flower_partner_id', partnerId);
-            
-            connectionSection.classList.add('hidden');
-            gameContainer.classList.remove('hidden');
-            // changePartnerBtn.classList.remove('hidden'); // REMOVED
-
-            renderGarden(0);
-            setupRealtimeListener();
-        };
-        
-        window.disconnectPartner = function() {
-            if (unsubscribeListener) unsubscribeListener();
-            partnerId = null;
-            
-            // Clear from localStorage
-            localStorage.removeItem('flower_partner_id');
-            
-            document.getElementById('partner-id-input').value = "";
-            
-            gameContainer.classList.add('hidden');
-            connectionSection.classList.remove('hidden');
-            // changePartnerBtn.classList.add('hidden'); // REMOVED
-            statusDisplay.innerHTML = "";
-            messageLog.innerHTML = "";
-            localCount = 0;
-            counterDisplay.innerText = "0";
-            petals = 0;
-            petalsDisplay.innerText = "0";
-            isFirstLoad = true; // Reset first load status
-            lastProcessedHeartbeat = 0;
-            
-            renderGarden(0);
-            progressBar.style.width = "0%";
-            sceneDisplay.innerHTML = "";
-        }
-
-        function setupRealtimeListener() {
-            if (unsubscribeListener) unsubscribeListener();
-
-            const pairId = [myId, partnerId].sort().join('_');
-            const docRef = doc(db, collectionPath, pairId);
-            
-            isFirstLoad = true; // Reset first load flag on new connection
-
-            unsubscribeListener = onSnapshot(docRef, (snapshot) => {
-                if (snapshot.exists()) {
-                    const data = snapshot.data();
-                    updateUI(data);
-                    checkWaterStatus(data.lastWatered);
-                    
-                    if (document.getElementById('view-daily').classList.contains('hidden') === false) {
-                        loadDailyQuestion(data);
-                    }
-                } else {
-                    statusDisplay.innerHTML = `<span class="text-pink-400">Ready! Plant the first seed...</span>`;
-                    checkWaterStatus(0);
-                }
-            }, (err) => {
-                console.error(err);
-                if (err.code === 'permission-denied') {
-                    showError("Permission denied. Check Firestore rules.");
-                } else {
-                    showError("Connection lost.");
-                }
-            });
-        }
-
-        // --- SHOP LOGIC ---
-        function renderShop() {
-            shopGrid.innerHTML = '';
-            SHOP_ITEMS.forEach(item => {
-                const isOwned = inventory.includes(item.id);
-                const canAfford = petals >= item.price;
-                
-                const btn = document.createElement('div');
-                btn.className = `p-4 rounded-xl border ${isOwned ? 'bg-green-50 border-green-200' : 'bg-white border-pink-100'} shadow-sm flex flex-col items-center`;
-                btn.innerHTML = `
-                    <div class="text-4xl mb-2">${item.icon}</div>
-                    <div class="font-bold text-sm text-gray-700">${item.name}</div>
-                    <div class="text-xs ${isOwned ? 'text-green-600 font-bold' : 'text-yellow-600'} mb-2">
-                        ${isOwned ? 'OWNED' : `${item.price} 🪙`}
-                    </div>
-                    ${!isOwned 
-                        ? `<button onclick="buyItem('${item.id}', ${item.price})" class="px-3 py-1 rounded-lg text-xs font-bold transition ${canAfford ? 'bg-pink-500 text-white hover:bg-pink-600' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}" ${!canAfford ? 'disabled' : ''}>Buy</button>`
-                        : '<span class="text-xs text-green-500">✓</span>'
-                    }
-                `;
-                shopGrid.appendChild(btn);
-            });
-        }
-
-        window.buyItem = async function(itemId, price) {
-            if (petals < price) return;
-            playSound('buy');
-            
-            const pairId = [myId, partnerId].sort().join('_');
-            const docRef = doc(db, collectionPath, pairId);
-            
-            try {
-                petals -= price;
-                petalsDisplay.innerText = petals;
-                inventory.push(itemId);
-                renderShop();
-
-                const snap = await getDoc(docRef);
-                let currentSpent = snap.exists() ? (snap.data().spentPetals || 0) : 0;
-                let currentInventory = snap.exists() ? (snap.data().inventory || []) : [];
-                
-                await setDoc(docRef, {
-                    spentPetals: currentSpent + price,
-                    inventory: [...currentInventory, itemId]
-                }, { merge: true });
-
+                if (isSignupMode) await createUserWithEmailAndPassword(auth, email, pass);
+                else await signInWithEmailAndPassword(auth, email, pass);
             } catch (e) {
-                showError("Purchase failed: " + e.message);
-            }
-        }
-
-        // --- DAILY QUESTION LOGIC ---
-        function getDailyQuestionIndex() {
-            const dateStr = new Date().toDateString();
-            let hash = 0;
-            for (let i = 0; i < dateStr.length; i++) {
-                hash = dateStr.charCodeAt(i) + ((hash << 5) - hash);
-            }
-            return Math.abs(hash) % DAILY_QUESTIONS.length;
-        }
-
-        function loadDailyQuestion(data) {
-            const today = new Date().toDateString();
-            const qIndex = getDailyQuestionIndex();
-            dailyQuestionText.innerText = DAILY_QUESTIONS[qIndex];
-            
-            dailyInputArea.classList.remove('hidden');
-            dailyResultArea.classList.add('hidden');
-            dailyAnswerInput.value = "";
-            
-            if (!data || !data.dailyQ || data.dailyQ.date !== today) {
-                return;
-            }
-
-            const dq = data.dailyQ;
-            const myAnswer = dq.answers ? dq.answers[myId] : null;
-            const partnerAnswer = dq.answers ? dq.answers[partnerId] : null;
-
-            if (myAnswer) {
-                dailyInputArea.classList.add('hidden');
-                dailyResultArea.classList.remove('hidden');
-                
-                if (partnerAnswer) {
-                    dailyStatusMsg.innerText = "✨ Daily Connection Complete! (+20 Bonus) ✨";
-                    dailyStatusMsg.className = "text-sm font-bold text-green-600 mb-4";
-                    
-                    partnerAnswerDisplay.classList.remove('hidden');
-                    partnerAnswerText.innerText = partnerAnswer;
-                } else {
-                    dailyStatusMsg.innerText = "Answer submitted! Waiting for partner...";
-                    dailyStatusMsg.className = "text-sm font-bold text-pink-500 mb-4 animate-pulse";
-                    partnerAnswerDisplay.classList.add('hidden');
-                }
-            }
-        }
-
-        window.submitDailyAnswer = async function() {
-            const answer = dailyAnswerInput.value.trim();
-            if (!answer) return;
-            
-            const pairId = [myId, partnerId].sort().join('_');
-            const docRef = doc(db, collectionPath, pairId);
-            const today = new Date().toDateString();
-            
-            try {
-                const snap = await getDoc(docRef);
-                const data = snap.data();
-                const dq = (data && data.dailyQ && data.dailyQ.date === today) ? data.dailyQ : { date: today, answers: {}, claimed: false };
-                
-                dq.answers = dq.answers || {};
-                dq.answers[myId] = answer;
-                
-                let bonus = 0;
-                let claimed = dq.claimed;
-                if (!claimed && dq.answers[partnerId]) {
-                    bonus = 20; 
-                    claimed = true;
-                    dq.claimed = true;
-                    playSound('levelup');
-                }
-
-                await setDoc(docRef, {
-                    dailyQ: dq,
-                    count: (data.count || 0) + bonus,
-                }, { merge: true });
-
-            } catch(e) {
-                showError("Failed to submit: " + e.message);
-            }
-        }
-
-
-        // --- MAIN GAME ACTIONS ---
-
-        window.waterGarden = async function() {
-            if (!partnerId) return;
-            playSound('water');
-            
-            const pairId = [myId, partnerId].sort().join('_');
-            const docRef = doc(db, collectionPath, pairId);
-            
-            try {
-                const snap = await getDoc(docRef);
-                let count = snap.exists() ? (snap.data().count || 0) : 0;
-                
-                await setDoc(docRef, {
-                    count: count + 10,
-                    lastWatered: Date.now(),
-                    lastWaterer: myId,
-                    lastAction: 'water'
-                }, { merge: true });
-                
-                waterBtn.disabled = true;
-                waterBadge.classList.add('hidden');
-            } catch(e) {
-                showError("Watering failed: " + e.message);
-            }
-        }
-
-        function checkWaterStatus(lastWateredTimestamp) {
-            const now = Date.now();
-            const last = lastWateredTimestamp || 0;
-            const hoursPassed = (now - last) / (1000 * 60 * 60);
-            
-            if (hoursPassed >= 20) {
-                waterBtn.disabled = false;
-                waterBadge.classList.remove('hidden');
-            } else {
-                waterBtn.disabled = true;
-                waterBadge.classList.add('hidden');
-            }
-        }
-
-        window.sendHeartbeat = async function() {
-            if (!partnerId) return;
-            playSound('heartbeat'); // Play sound locally for feedback
-            
-            const pairId = [myId, partnerId].sort().join('_');
-            const docRef = doc(db, collectionPath, pairId);
-            
-            try {
-                // Update Firestore with heartbeat timestamp
-                await setDoc(docRef, {
-                    lastHeartbeat: Date.now(),
-                    heartbeatSender: myId
-                }, { merge: true });
-            } catch (err) {
-                showError("Failed to send heartbeat.");
-            }
-        }
-
-        window.sendFlower = async function() {
-            if (!partnerId) return;
-
-            const pairId = [myId, partnerId].sort().join('_');
-            const docRef = doc(db, collectionPath, pairId);
-            const userNote = noteInput.value.trim();
-
-            try {
-                const snap = await getDoc(docRef);
-                let currentCount = 0;
-                let history = [];
-                if (snap.exists()) {
-                    currentCount = snap.data().count || 0;
-                    history = snap.data().messageHistory || [];
-                }
-
-                const isShiny = Math.random() < 0.05;
-                const bonus = isShiny ? 5 : 1;
-                
-                const unlocked = GAME_LEVELS.filter(l => l.count <= currentCount);
-                const randomItem = unlocked[Math.floor(Math.random() * unlocked.length)];
-
-                if (isShiny) playSound('shiny');
-                else playSound('send');
-
-                const newMessage = {
-                    sender: myId,
-                    flower: randomItem.emoji,
-                    note: userNote,
-                    isShiny: isShiny,
-                    timestamp: Date.now()
-                };
-
-                // Add to history (Newest at end)
-                history.push(newMessage);
-                // Keep last 10 (remove from front)
-                if (history.length > 10) history.shift();
-
-                await setDoc(docRef, {
-                    sender: myId,
-                    flower: randomItem.emoji,
-                    note: userNote,
-                    isShiny: isShiny,
-                    count: currentCount + bonus,
-                    timestamp: Date.now(),
-                    lastAction: 'flower',
-                    messageHistory: history
-                }, { merge: true });
-                
-                noteInput.value = ""; 
-
-            } catch (err) {
-                showError("Failed to send: " + err.message);
+                els.authError.textContent = e.message;
+                els.authError.classList.remove('hidden');
             }
         };
+
+        window.handleLogout = async () => {
+            await signOut(auth);
+            localStorage.removeItem('flower_partner_id');
+            location.reload();
+        };
+
+        window.copyMyId = () => {
+            navigator.clipboard.writeText(myId);
+            alert("ID Copied!");
+        };
+
+        window.connectToPartner = () => {
+            const pid = els.partnerInput.value.trim();
+            if(!pid || pid === myId) return alert("Invalid ID");
+            localStorage.setItem('flower_partner_id', pid);
+            partnerId = pid;
+            showGame();
+        };
+
+        window.disconnectPartner = () => {
+            localStorage.removeItem('flower_partner_id');
+            location.reload();
+        };
+
+        // --- GAME LOGIC ---
+        function setupListener() {
+            if (unsubscribeListener) unsubscribeListener();
+            const pairId = [myId, partnerId].sort().join('_');
+            const docRef = doc(db, collectionPath, pairId);
+
+            unsubscribeListener = onSnapshot(docRef, (snap) => {
+                if (snap.exists()) {
+                    const data = snap.data();
+                    updateUI(data);
+                } else {
+                    els.status.textContent = "New garden created! Plant the first seed.";
+                }
+            });
+        }
 
         function updateUI(data) {
             const count = data.count || 0;
-            const spent = data.spentPetals || 0;
             
-            inventory = data.inventory || [];
+            if (count > lastFlowerCount && lastFlowerCount !== 0 && data.sender !== myId) {
+                // Ensure hidden class is cleared if previously set, but the parent flex controls visibility
+                // With the new CSS fix, adding/removing 'hidden' will correctly toggle visibility
+                els.gift.classList.remove('hidden');
+                playSound('receive');
+            }
+            lastFlowerCount = count;
+
+            const spent = data.spentPetals || 0;
             petals = count - spent;
-            if (petals < 0) petals = 0;
+            els.petals.textContent = petals;
+            inventory = data.inventory || [];
 
-            counterDisplay.innerText = count;
-            petalsDisplay.innerText = petals;
+            renderOrganicGarden(count);
+            renderMemory(data.messageHistory || []);
+            renderSky();
 
-            // Heartbeat Logic
             if (data.lastHeartbeat && data.lastHeartbeat > lastProcessedHeartbeat) {
-                if (!isFirstLoad) { // Don't pulse on first load
-                    const isFromPartner = data.heartbeatSender !== myId;
-                    // Only pulse if it's from partner and recent (within last 3 seconds)
-                    if (isFromPartner && (Date.now() - data.lastHeartbeat < 3000)) {
-                        playSound('heartbeat');
-                        triggerSystemNotification("❤️ Heartbeat", "Your partner is thinking of you.");
-                        heartbeatOverlay.classList.add('pulse-active');
-                        setTimeout(() => heartbeatOverlay.classList.remove('pulse-active'), 2000);
-                    }
+                if (data.heartbeatSender !== myId && (Date.now() - data.lastHeartbeat < 3000)) {
+                    playSound('heartbeat');
+                    els.heartbeat.classList.add('pulse-active');
+                    setTimeout(() => els.heartbeat.classList.remove('pulse-active'), 2000);
                 }
                 lastProcessedHeartbeat = data.lastHeartbeat;
             }
 
-            // Render Message History
-            if (data.messageHistory && data.messageHistory.length > 0) {
-                messageLog.innerHTML = '';
-                data.messageHistory.forEach(msg => {
-                    const isMe = msg.sender === myId;
-                    const bubble = document.createElement('div');
-                    bubble.className = `msg-bubble ${isMe ? 'msg-me' : 'msg-partner'} flex flex-col`;
-                    const shinyIcon = msg.isShiny ? '✨' : '';
-                    const noteText = msg.note ? `<div class="italic">${msg.note}</div>` : '';
-                    
-                    // Simple date formatting
-                    const time = new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                    
-                    bubble.innerHTML = `
-                        <div class="flex items-center gap-1 mb-1">
-                            <span class="text-lg">${msg.flower}</span>
-                            <span class="text-[10px] opacity-70">${shinyIcon} ${time}</span>
-                        </div>
-                        ${noteText}
-                    `;
-                    messageLog.appendChild(bubble);
-                });
-                // Ensure scroll to bottom for the latest message
-                messageLog.scrollTop = messageLog.scrollHeight;
-            } else {
-                messageLog.innerHTML = '<div class="text-center text-xs text-gray-400 italic mt-4">No notes yet... send one!</div>';
-            }
+            checkDaily(data);
+        }
 
-            sceneDisplay.innerHTML = '';
+        // --- RENDERING ---
+        function renderOrganicGarden(count) {
+            els.garden.innerHTML = '<div class="ground-overlay"></div>';
+            const visualCount = Math.min(count, 50);
+            
+            for(let i=0; i<visualCount; i++) {
+                const el = document.createElement('div');
+                el.className = 'flower-sprite';
+                const left = ((i * 137.5) % 90) + 5; 
+                const bottom = ((i * 50) % 25) + 2; 
+                const scale = 0.8 + ((i % 5)/10);
+                const flowers = ['🌸', '🌹', '🌻', '🌷', '🌺', '🌼'];
+                const emoji = flowers[i % flowers.length];
+                
+                el.style.left = `${left}%`;
+                el.style.bottom = `${bottom}%`;
+                el.style.transform = `scale(${scale})`;
+                el.style.animationDelay = `${i * 0.05}s`;
+                el.innerText = emoji;
+                els.garden.appendChild(el);
+            }
+        }
+
+        function renderMemory(history) {
+            els.memoryWall.innerHTML = '';
+            history.forEach(msg => {
+                if (!msg.note) return;
+                const div = document.createElement('div');
+                div.className = 'polaroid';
+                const date = new Date(msg.timestamp).toLocaleDateString();
+                const sender = msg.sender === myId ? "Me" : "Partner";
+                div.innerHTML = `
+                    <div class="w-full h-24 bg-gray-100 mb-2 flex items-center justify-center text-4xl">${msg.flower}</div>
+                    <div class="text-sm font-bold mb-1">"${msg.note}"</div>
+                    <div class="text-xs text-gray-400 flex justify-between">
+                        <span>${sender}</span>
+                        <span>${date}</span>
+                    </div>
+                `;
+                els.memoryWall.appendChild(div);
+            });
+        }
+
+        function renderSky() {
+            els.sky.innerHTML = '';
             SHOP_ITEMS.forEach(item => {
                 if (inventory.includes(item.id)) {
                     const el = document.createElement('div');
-                    el.className = 'scene-item';
+                    el.className = 'text-4xl animate-pop';
                     el.innerText = item.icon;
-                    sceneDisplay.appendChild(el);
+                    els.sky.appendChild(el);
                 }
             });
+        }
 
-            const currentLevelIndex = GAME_LEVELS.findLastIndex(l => count >= l.count);
-            const nextLevel = GAME_LEVELS[currentLevelIndex + 1];
+        // --- ACTIONS ---
+        window.sendFlower = async () => {
+            if (!partnerId) return;
+            const pairId = [myId, partnerId].sort().join('_');
+            const note = els.note.value.trim();
+            playSound('send');
             
-            if (count > localCount) {
-                const prevLevelIndex = GAME_LEVELS.findLastIndex(l => localCount >= l.count);
-                if (currentLevelIndex > prevLevelIndex) {
-                    // Only trigger animation if it's NOT the first load
-                    if (!isFirstLoad) {
-                        triggerLevelUp(GAME_LEVELS[currentLevelIndex]);
-                    }
-                }
-            }
-            localCount = count;
-            isFirstLoad = false; // Mark first load as complete
+            try {
+                const docRef = doc(db, collectionPath, pairId);
+                const snap = await getDoc(docRef);
+                let currentHistory = snap.exists() ? (snap.data().messageHistory || []) : [];
+                let count = snap.exists() ? (snap.data().count || 0) : 0;
+                
+                const flower = ['🌸', '🌹', '🌻'][Math.floor(Math.random()*3)];
+                const msg = { sender: myId, note, flower, timestamp: Date.now() };
+                currentHistory.unshift(msg);
+                if(currentHistory.length > 20) currentHistory.pop();
 
-            let progressPercent = 100;
-            if (nextLevel) {
-                const prevThreshold = GAME_LEVELS[currentLevelIndex].count;
-                const nextThreshold = nextLevel.count;
-                const range = nextThreshold - prevThreshold;
-                const currentProgress = count - prevThreshold;
-                progressPercent = Math.floor((currentProgress / range) * 100);
-                nextUnlockText.innerText = `Next: ${nextLevel.name}`;
-                currentLevelSpan.innerText = currentLevelIndex + 1;
-            } else {
-                nextUnlockText.innerText = "Max Level!";
-                currentLevelSpan.innerText = "MAX";
-            }
-            progressBar.style.width = `${progressPercent}%`;
-
-            renderGarden(count);
-
-            if (data.sender) {
-                const isMe = data.sender === myId;
-                if (!isMe && data.timestamp > (Date.now() - 5000)) {
-                    playSound('receive');
-                    triggerSystemNotification("New Flower! 🌸", data.note || "Someone sent you a flower.");
-                }
-            }
-        }
-
-        function renderGarden(currentCount) {
-            gardenGrid.innerHTML = '';
-            GAME_LEVELS.forEach(level => {
-                const isUnlocked = currentCount >= level.count;
-                const el = document.createElement('div');
-                el.className = `garden-item ${isUnlocked ? 'unlocked' : 'locked'} flex flex-col items-center w-12`;
-                el.innerHTML = `
-                    <span class="text-2xl">${level.emoji}</span>
-                    ${!isUnlocked ? `<span class="text-[8px] text-gray-400 mt-1">${level.count}</span>` : ''}
-                `;
-                gardenGrid.appendChild(el);
-            });
-        }
-
-        function triggerLevelUp(levelData) {
-            playSound('levelup');
-            startConfetti();
-            levelUpIcon.innerText = levelData.emoji;
-            levelUpName.innerText = levelData.name;
-            levelUpOverlay.classList.remove('hidden');
-        }
-
-        window.closeLevelUp = function() {
-            levelUpOverlay.classList.add('hidden');
-        }
-
-        window.copyMyId = function() {
-            myIdInput.select();
-            document.execCommand('copy');
-            const feedback = document.getElementById('copy-feedback');
-            feedback.classList.remove('hidden');
-            setTimeout(() => feedback.classList.add('hidden'), 2000);
+                await setDoc(docRef, {
+                    count: count + 1,
+                    sender: myId,
+                    note: note,
+                    messageHistory: currentHistory,
+                    timestamp: Date.now()
+                }, { merge: true });
+                
+                els.note.value = '';
+                els.status.textContent = "Flower planted!";
+                startConfetti(); 
+            } catch(e) { alert("Error sending"); }
         };
 
-        function showError(msg) {
-            errorBanner.textContent = msg;
-            errorBanner.classList.remove('hidden');
+        window.sendHeartbeat = async () => {
+            if(!partnerId) return;
+            playSound('heartbeat');
+            const pairId = [myId, partnerId].sort().join('_');
+            await setDoc(doc(db, collectionPath, pairId), {
+                lastHeartbeat: Date.now(),
+                heartbeatSender: myId
+            }, { merge: true });
+        };
+
+        window.openGift = () => {
+            const gift = document.getElementById('gift-overlay');
+            if(gift) gift.classList.add('hidden');
+            try { playSound('levelup'); } catch(e){}
+            startConfetti();
+        };
+
+        // --- SHOP & DAILY ---
+        function renderShop() {
+            els.shopGrid.innerHTML = '';
+            SHOP_ITEMS.forEach(item => {
+                const owned = inventory.includes(item.id);
+                const div = document.createElement('div');
+                div.className = `p-4 rounded-2xl bg-white/60 border border-white flex flex-col items-center shadow-sm ${owned ? 'opacity-50' : ''}`;
+                div.innerHTML = `
+                    <div class="text-4xl mb-2">${item.icon}</div>
+                    <div class="font-bold text-sm">${item.name}</div>
+                    <div class="text-xs text-pink-500 font-bold mb-2">${item.price} 🪙</div>
+                    ${!owned ? `<button onclick="buy('${item.id}', ${item.price})" class="px-4 py-1 bg-pink-500 text-white rounded-full text-xs font-bold juicy-btn">Buy</button>` : '<span class="text-xs text-green-600">Owned</span>'}
+                `;
+                els.shopGrid.appendChild(div);
+            });
         }
 
-        // Start App
-        init();
+        window.buy = async (id, price) => {
+            if(petals < price) return alert("Not enough petals!");
+            playSound('buy');
+            const pairId = [myId, partnerId].sort().join('_');
+            const docRef = doc(db, collectionPath, pairId);
+            const snap = await getDoc(docRef);
+            let spent = snap.data().spentPetals || 0;
+            let inv = snap.data().inventory || [];
+            await setDoc(docRef, { spentPetals: spent + price, inventory: [...inv, id] }, { merge: true });
+        };
 
+        function checkDaily(data) {
+            const today = new Date().toDateString();
+            const idx = Math.abs(today.split('').reduce((a,c)=>a+c.charCodeAt(0),0)) % DAILY_QUESTIONS.length;
+            els.dailyQ.textContent = DAILY_QUESTIONS[idx];
+            
+            const dq = (data && data.dailyQ && data.dailyQ.date === today) ? data.dailyQ : null;
+            if(dq && dq.answers && dq.answers[myId]) {
+                els.dailyInput.classList.add('hidden');
+                els.dailyRes.classList.remove('hidden');
+                els.dailyStatus.textContent = "Answer submitted!";
+                if(dq.answers[partnerId]) {
+                    els.dailyStatus.textContent = "Partner answered! (+20 Bonus)";
+                    els.partnerAnsDisplay.classList.remove('hidden');
+                    els.partnerAnsText.textContent = dq.answers[partnerId];
+                }
+            } else {
+                els.dailyInput.classList.remove('hidden');
+                els.dailyRes.classList.add('hidden');
+            }
+        }
+
+        window.submitDailyAnswer = async () => {
+            const val = els.dailyInputText.value.trim();
+            if(!val) return;
+            const pairId = [myId, partnerId].sort().join('_');
+            const today = new Date().toDateString();
+            const docRef = doc(db, collectionPath, pairId);
+            const snap = await getDoc(docRef);
+            const data = snap.data();
+            const dq = (data.dailyQ && data.dailyQ.date === today) ? data.dailyQ : { date: today, answers: {}, claimed: false };
+            
+            dq.answers = dq.answers || {};
+            dq.answers[myId] = val;
+            
+            let bonus = 0;
+            if(!dq.claimed && dq.answers[partnerId]) { bonus = 20; dq.claimed = true; playSound('levelup'); }
+            
+            await setDoc(docRef, { dailyQ: dq, count: (data.count||0) + bonus }, { merge: true });
+        };
+
+        // --- TABS & VISUALS ---
+        window.switchTab = (tab) => {
+            ['garden', 'memory', 'shop', 'daily'].forEach(t => {
+                document.getElementById(`tab-${t}-content`).classList.add('hidden');
+                document.getElementById(`nav-${t}`).classList.remove('active', 'text-pink-500');
+                document.getElementById(`nav-${t}`).classList.add('text-gray-500');
+            });
+            document.getElementById(`tab-${tab}-content`).classList.remove('hidden');
+            const btn = document.getElementById(`nav-${tab}`);
+            btn.classList.add('active', 'text-pink-500');
+            btn.classList.remove('text-gray-500');
+        };
+
+        window.changeTheme = (theme) => {
+            document.body.className = `${theme} font-sans text-gray-800`;
+            localStorage.setItem('love_garden_theme', theme);
+            
+            const bg = els.bg;
+            bg.innerHTML = '';
+            if(theme === 'theme-day') {
+                for(let i=0; i<3; i++) {
+                    const c = document.createElement('div');
+                    c.className = 'cloud';
+                    c.style.width = (100 + Math.random()*100) + 'px';
+                    c.style.height = (40 + Math.random()*40) + 'px';
+                    c.style.top = (Math.random()*30) + '%';
+                    c.style.animationDuration = (20 + Math.random()*20) + 's';
+                    bg.appendChild(c);
+                }
+            } else if (theme === 'theme-night') {
+                for(let i=0; i<20; i++) {
+                    const s = document.createElement('div');
+                    s.className = 'star';
+                    s.style.width = Math.random()*3 + 'px';
+                    s.style.height = s.style.width;
+                    s.style.top = Math.random()*50 + '%';
+                    s.style.left = Math.random()*100 + '%';
+                    s.style.animationDelay = Math.random()*2 + 's';
+                    bg.appendChild(s);
+                }
+            }
+        };
+
+        window.changeAmbience = (val) => {
+            if(audioCtx.state === 'suspended') audioCtx.resume();
+            stopAmbience();
+            isAmbiencePlaying = true;
+            if(val === 'rain') startRain();
+            else if(val === 'ocean') startOcean();
+            else if(val === 'birds') startForest();
+            else isAmbiencePlaying = false;
+            
+            // Visual rain
+            if (val === 'rain') {
+                for(let i=0; i<20; i++) {
+                    const r = document.createElement('div');
+                    r.className = 'raindrop';
+                    r.style.left = Math.random()*100 + '%';
+                    r.style.animationDuration = (0.5 + Math.random()*0.5) + 's';
+                    r.style.animationDelay = Math.random() + 's';
+                    els.bg.appendChild(r);
+                }
+            } else {
+                const drops = document.querySelectorAll('.raindrop');
+                drops.forEach(d => d.remove());
+            }
+        };
+
+        // --- AUDIO HELPERS ---
+        function playSound(type) {
+            if(audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            let freq=440, dur=0.5;
+            
+            if (type === 'send') { freq=440; }
+            else if (type === 'receive') { freq=554; }
+            else if (type === 'heartbeat') { 
+                freq=100; dur=0.2; osc.type='triangle'; 
+            }
+            else if (type === 'levelup') { freq=880; }
+            else if (type === 'buy') { freq=600; dur=0.1; osc.type='square'; }
+
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.start(); osc.stop(audioCtx.currentTime + dur);
+        }
+
+        // --- AMBIENCE GENERATORS ---
+        function startRain() {
+            const buf = audioCtx.createBuffer(1, audioCtx.sampleRate*2, audioCtx.sampleRate);
+            const data = buf.getChannelData(0);
+            for(let i=0; i<data.length; i++) data[i] = (Math.random()*2-1)*0.2;
+            
+            ambienceSource = audioCtx.createBufferSource();
+            ambienceSource.buffer = buf;
+            ambienceSource.loop = true;
+            ambienceGainNode = audioCtx.createGain();
+            ambienceGainNode.gain.value = 0.15;
+            
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'lowpass'; filter.frequency.value = 800;
+            
+            ambienceSource.connect(filter); filter.connect(ambienceGainNode);
+            ambienceGainNode.connect(audioCtx.destination);
+            ambienceSource.start();
+        }
+        
+        function startOcean() { /* Simplified pink noise logic */ 
+            startRain(); 
+        }
+        function startForest() { /* Reusing similar logic */ 
+            startRain(); 
+            birdInterval = setInterval(() => {
+                if(Math.random()>0.7) playSound('send'); 
+            }, 3000);
+        }
+        
+        function stopAmbience() {
+            if(ambienceSource) ambienceSource.stop();
+            if(birdInterval) clearInterval(birdInterval);
+        }
+
+        // Confetti Helper
+        function startConfetti() {
+            const ctx = document.getElementById('confetti-canvas').getContext('2d');
+            ctx.canvas.width = window.innerWidth; ctx.canvas.height = window.innerHeight;
+            let p = [];
+            for(let i=0; i<50; i++) p.push({x:Math.random()*ctx.canvas.width, y:Math.random()*ctx.canvas.height, vy:Math.random()*5+2, color:'hsl('+Math.random()*360+',100%,50%)'});
+            function draw() {
+                ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
+                p.forEach((k,i)=>{ k.y+=k.vy; if(k.y>ctx.canvas.height) p.splice(i,1); ctx.fillStyle=k.color; ctx.fillRect(k.x,k.y,5,5); });
+                if(p.length) requestAnimationFrame(draw);
+            }
+            draw();
+        }
+
+        // Init on load
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
     </script>
 </body>
 </html>
