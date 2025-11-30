@@ -214,6 +214,12 @@
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 4px; }
         
+        /* Ambience Button Active State */
+        .ambience-active {
+            background-color: #dbeafe; /* blue-100 */
+            color: #2563eb; /* blue-600 */
+            border-color: #93c5fd;
+        }
     </style>
 </head>
 <body class="theme-day min-h-screen font-sans text-gray-800 flex items-center justify-center p-4 transition-colors duration-500">
@@ -259,7 +265,8 @@
                     </div>
                     <!-- Settings Buttons -->
                     <div class="flex gap-2">
-                        <button id="change-partner-btn" onclick="disconnectPartner()" class="hidden text-[10px] text-gray-400 hover:text-pink-500 underline transition">Change Partner</button>
+                        <!-- Notifications Toggle -->
+                        <button id="notify-btn" onclick="requestNotificationPermission()" class="hidden text-[10px] text-gray-400 hover:text-green-500 underline transition">Enable Notifications</button>
                         <button id="logout-btn" onclick="handleLogout()" class="hidden text-[10px] text-gray-400 hover:text-red-500 underline transition">Log Out</button>
                     </div>
                 </div>
@@ -578,8 +585,9 @@
         const noteInput = document.getElementById('love-note');
         const waterBtn = document.getElementById('water-btn');
         const waterBadge = document.getElementById('water-badge');
-        const changePartnerBtn = document.getElementById('change-partner-btn');
+        // const changePartnerBtn = document.getElementById('change-partner-btn'); // REMOVED
         const logoutBtn = document.getElementById('logout-btn');
+        const notifyBtn = document.getElementById('notify-btn'); // NEW
         const themeSelector = document.getElementById('theme-selector');
         const ambienceSelector = document.getElementById('ambience-selector');
         
@@ -890,6 +898,32 @@
             }, 3000);
         }
 
+        // --- NOTIFICATION LOGIC ---
+        window.requestNotificationPermission = async function() {
+            if (!("Notification" in window)) {
+                alert("This browser does not support system notifications.");
+                return;
+            }
+            const permission = await Notification.requestPermission();
+            if (permission === "granted") {
+                notifyBtn.classList.add('hidden'); // Hide button if granted
+                // Test notification
+                new Notification("Notifications Enabled! 🌸", {
+                    body: "You will now be notified when you receive flowers.",
+                    icon: "icon.png"
+                });
+            }
+        }
+
+        function triggerSystemNotification(title, body) {
+            if (document.visibilityState === 'hidden' && Notification.permission === "granted") {
+                new Notification(title, {
+                    body: body,
+                    icon: "icon.png"
+                });
+            }
+        }
+
         // --- INITIALIZATION ---
         async function init() {
             try {
@@ -898,6 +932,13 @@
                 if (savedTheme) {
                     changeTheme(savedTheme);
                     themeSelector.value = savedTheme;
+                }
+                
+                // Check notification permission to hide button
+                if (Notification.permission === "granted" || Notification.permission === "denied") {
+                    notifyBtn.classList.add('hidden');
+                } else {
+                    notifyBtn.classList.remove('hidden');
                 }
 
                 setTimeout(() => {
@@ -934,7 +975,7 @@
                             // Auto-start game UI
                             connectionSection.classList.add('hidden');
                             gameContainer.classList.remove('hidden');
-                            changePartnerBtn.classList.remove('hidden');
+                            // changePartnerBtn.classList.remove('hidden'); // REMOVED
                             
                             renderGarden(0);
                             setupRealtimeListener();
@@ -1042,7 +1083,7 @@
             
             connectionSection.classList.add('hidden');
             gameContainer.classList.remove('hidden');
-            changePartnerBtn.classList.remove('hidden');
+            // changePartnerBtn.classList.remove('hidden'); // REMOVED
 
             renderGarden(0);
             setupRealtimeListener();
@@ -1059,7 +1100,7 @@
             
             gameContainer.classList.add('hidden');
             connectionSection.classList.remove('hidden');
-            changePartnerBtn.classList.add('hidden');
+            // changePartnerBtn.classList.add('hidden'); // REMOVED
             statusDisplay.innerHTML = "";
             messageLog.innerHTML = "";
             localCount = 0;
@@ -1370,6 +1411,7 @@
                     // Only pulse if it's from partner and recent (within last 3 seconds)
                     if (isFromPartner && (Date.now() - data.lastHeartbeat < 3000)) {
                         playSound('heartbeat');
+                        triggerSystemNotification("❤️ Heartbeat", "Your partner is thinking of you.");
                         heartbeatOverlay.classList.add('pulse-active');
                         setTimeout(() => heartbeatOverlay.classList.remove('pulse-active'), 2000);
                     }
@@ -1451,6 +1493,7 @@
                 const isMe = data.sender === myId;
                 if (!isMe && data.timestamp > (Date.now() - 5000)) {
                     playSound('receive');
+                    triggerSystemNotification("New Flower! 🌸", data.note || "Someone sent you a flower.");
                 }
             }
         }
