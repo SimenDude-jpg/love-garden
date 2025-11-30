@@ -216,6 +216,20 @@
             
             <!-- GARDEN TAB (Organic Layout) -->
             <div id="tab-garden-content" class="absolute inset-0">
+                
+                <!-- PROGRESS BAR WIDGET -->
+                <div class="absolute top-2 w-full px-6 z-10">
+                    <div class="bg-white/30 backdrop-blur-md border border-white/40 rounded-xl p-2 shadow-sm">
+                        <div class="flex justify-between text-[10px] font-bold text-gray-700 mb-1 px-1">
+                            <span id="current-level-name">Level 1</span>
+                            <span id="next-unlock-text" class="text-pink-600">Next: Rose (10)</span>
+                        </div>
+                        <div class="h-2 w-full bg-white/50 rounded-full overflow-hidden">
+                            <div id="progress-bar" class="h-full bg-gradient-to-r from-pink-400 to-rose-500 transition-all duration-500 rounded-full" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Sky decorations (purchased) -->
                 <div id="sky-layer" class="absolute top-20 w-full flex justify-center gap-4 z-0 pointer-events-none opacity-80"></div>
                 
@@ -228,7 +242,7 @@
                 <!-- Controls Container (Floating above bottom nav) -->
                 <div class="absolute bottom-24 w-full px-4 flex flex-col gap-2 z-20">
                     <!-- Status Bubble -->
-                    <div id="status-display" class="bg-white/70 backdrop-blur-sm rounded-2xl p-2 text-center text-xs shadow-sm min-h-[2.5rem] flex flex-col justify-center mx-4 transition-opacity duration-1000">
+                    <div id="status-display" class="bg-white/70 backdrop-blur-sm rounded-2xl p-2 text-center text-xs shadow-sm min-h-[2.5rem] flex flex-col justify-center mx-4 transition-opacity duration-1000 opacity-0">
                         Welcome to the garden!
                     </div>
                     
@@ -341,6 +355,21 @@
             "Movie you want to watch?", "Dream vacation?", "Meal you'd love right now?",
             "Teleport anywhere, where?", "Something I do that makes you smile?", "Song on repeat?", "Us in one word."
         ];
+        
+        // Progress Levels
+        const GAME_LEVELS = [
+            { count: 0,   emoji: '🌸', name: 'Cherry Blossom' },
+            { count: 10,  emoji: '🌹', name: 'Red Rose' },
+            { count: 25,  emoji: '🌻', name: 'Sunflower' },
+            { count: 50,  emoji: '🌷', name: 'Tulip' },
+            { count: 75,  emoji: '🌺', name: 'Hibiscus' },
+            { count: 100, emoji: '💐', name: 'Grand Bouquet' },
+            { count: 150, emoji: '🪴', name: 'Potted Plant' },
+            { count: 200, emoji: '🐝', name: 'Garden Bee' },
+            { count: 300, emoji: '💖', name: 'Pure Love' },
+            { count: 500, emoji: '💎', name: 'Diamond' },
+            { count: 1000, emoji: '👑', name: 'Royal Crown' }
+        ];
 
         // --- INIT ---
         async function init() {
@@ -377,7 +406,11 @@
                 partnerAnsText: document.getElementById('partner-answer-text'),
                 dailyInputText: document.getElementById('daily-answer-input'),
                 // Notification ref
-                notifyBtn: document.getElementById('notify-btn')
+                notifyBtn: document.getElementById('notify-btn'),
+                // Progress Refs
+                progressBar: document.getElementById('progress-bar'),
+                currentLevelName: document.getElementById('current-level-name'),
+                nextUnlockText: document.getElementById('next-unlock-text')
             };
 
             try {
@@ -527,6 +560,30 @@
             }
 
             checkDaily(data);
+            updateProgress(count);
+        }
+        
+        function updateProgress(count) {
+            const currentLevelIndex = GAME_LEVELS.findLastIndex(l => count >= l.count);
+            const nextLevel = GAME_LEVELS[currentLevelIndex + 1];
+            
+            let progressPercent = 100;
+            let nextText = "Max Level!";
+            let levelName = "Max";
+
+            if (nextLevel) {
+                const prevThreshold = GAME_LEVELS[currentLevelIndex].count;
+                const nextThreshold = nextLevel.count;
+                const range = nextThreshold - prevThreshold;
+                const currentProgress = count - prevThreshold;
+                progressPercent = Math.floor((currentProgress / range) * 100);
+                nextText = `Next: ${nextLevel.name} (${nextLevel.count})`;
+                levelName = `Level ${currentLevelIndex + 1}`;
+            }
+            
+            if(els.progressBar) els.progressBar.style.width = `${progressPercent}%`;
+            if(els.currentLevelName) els.currentLevelName.innerText = levelName;
+            if(els.nextUnlockText) els.nextUnlockText.innerText = nextText;
         }
 
         // --- RENDERING ---
