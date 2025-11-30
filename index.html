@@ -239,14 +239,17 @@
                     </h1>
                     <p class="text-pink-400 text-xs font-bold uppercase tracking-widest">Co-op Collection Game</p>
                 </div>
-                <div class="flex flex-col gap-2 items-end">
-                    <select id="theme-selector" onchange="changeTheme(this.value)" class="text-xs border border-pink-200 rounded-lg p-1 bg-white/50 focus:outline-none text-pink-600 font-bold">
+                <div class="flex flex-col gap-1 items-end">
+                    <select id="theme-selector" onchange="changeTheme(this.value)" class="text-xs border border-pink-200 rounded-lg p-1 bg-white/50 focus:outline-none text-pink-600 font-bold mb-1">
                         <option value="theme-day">☀️ Day</option>
                         <option value="theme-night">🌙 Night</option>
                         <option value="theme-sunset">🌅 Sunset</option>
                     </select>
-                    <!-- Log Out Button (Hidden until connected) -->
-                    <button id="logout-btn" onclick="handleLogout()" class="hidden text-[10px] text-gray-400 hover:text-red-500 underline">Log Out</button>
+                    <!-- Settings Buttons -->
+                    <div class="flex gap-2">
+                        <button id="change-partner-btn" onclick="disconnectPartner()" class="hidden text-[10px] text-gray-400 hover:text-pink-500 underline transition">Change Partner</button>
+                        <button id="logout-btn" onclick="handleLogout()" class="hidden text-[10px] text-gray-400 hover:text-red-500 underline transition">Log Out</button>
+                    </div>
                 </div>
             </div>
 
@@ -312,7 +315,6 @@
                             Start Game
                         </button>
                     </div>
-                    <button id="disconnect-btn" onclick="disconnectPartner()" class="hidden mt-2 text-xs text-gray-400 hover:text-red-500 underline w-full text-center">Change Partner ID</button>
                 </div>
 
                 <!-- GAME CONTAINER (Hidden until connected) -->
@@ -557,7 +559,7 @@
         const noteInput = document.getElementById('love-note');
         const waterBtn = document.getElementById('water-btn');
         const waterBadge = document.getElementById('water-badge');
-        const disconnectBtn = document.getElementById('disconnect-btn');
+        const changePartnerBtn = document.getElementById('change-partner-btn');
         const logoutBtn = document.getElementById('logout-btn');
         const themeSelector = document.getElementById('theme-selector');
         
@@ -729,6 +731,22 @@
                         viewApp.classList.remove('hidden');
                         document.getElementById('status-badge').classList.remove('hidden');
                         logoutBtn.classList.remove('hidden');
+                        
+                        // Check for saved partner ID
+                        const savedPartnerId = localStorage.getItem('flower_partner_id');
+                        if (savedPartnerId) {
+                            partnerId = savedPartnerId;
+                            // Auto-start game UI
+                            connectionSection.classList.add('hidden');
+                            gameContainer.classList.remove('hidden');
+                            changePartnerBtn.classList.remove('hidden');
+                            
+                            renderGarden(0);
+                            setupRealtimeListener();
+                        } else {
+                            // Show connection screen if no partner saved
+                            connectionSection.classList.remove('hidden');
+                        }
                     } else {
                         // Not Logged In
                         viewApp.classList.add('hidden');
@@ -824,9 +842,12 @@
 
             partnerId = input;
             
+            // Save to localStorage
+            localStorage.setItem('flower_partner_id', partnerId);
+            
             connectionSection.classList.add('hidden');
             gameContainer.classList.remove('hidden');
-            disconnectBtn.classList.remove('hidden');
+            changePartnerBtn.classList.remove('hidden');
 
             renderGarden(0);
             setupRealtimeListener();
@@ -835,11 +856,15 @@
         window.disconnectPartner = function() {
             if (unsubscribeListener) unsubscribeListener();
             partnerId = null;
+            
+            // Clear from localStorage
+            localStorage.removeItem('flower_partner_id');
+            
             document.getElementById('partner-id-input').value = "";
             
             gameContainer.classList.add('hidden');
             connectionSection.classList.remove('hidden');
-            disconnectBtn.classList.add('hidden');
+            changePartnerBtn.classList.add('hidden');
             statusDisplay.innerHTML = "";
             messageLog.innerHTML = "";
             localCount = 0;
