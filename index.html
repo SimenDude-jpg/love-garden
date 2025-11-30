@@ -213,6 +213,7 @@
 
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 4px; }
+        
     </style>
 </head>
 <body class="theme-day min-h-screen font-sans text-gray-800 flex items-center justify-center p-4 transition-colors duration-500">
@@ -240,11 +241,22 @@
                     <p class="text-pink-400 text-xs font-bold uppercase tracking-widest">Co-op Collection Game</p>
                 </div>
                 <div class="flex flex-col gap-1 items-end">
-                    <select id="theme-selector" onchange="changeTheme(this.value)" class="text-xs border border-pink-200 rounded-lg p-1 bg-white/50 focus:outline-none text-pink-600 font-bold mb-1">
-                        <option value="theme-day">☀️ Day</option>
-                        <option value="theme-night">🌙 Night</option>
-                        <option value="theme-sunset">🌅 Sunset</option>
-                    </select>
+                    <div class="flex gap-2 mb-1">
+                        <!-- Ambience Selector -->
+                        <select id="ambience-selector" onchange="changeAmbience(this.value)" class="text-xs border border-pink-200 rounded-lg p-1 bg-white/50 focus:outline-none text-blue-600 font-bold" title="Ambient Sound">
+                            <option value="none">🔇 Off</option>
+                            <option value="rain">🌧️ Rain</option>
+                            <option value="birds">🐦 Forest</option>
+                            <option value="ocean">🌊 Ocean</option>
+                        </select>
+                        
+                        <!-- Theme Selector -->
+                        <select id="theme-selector" onchange="changeTheme(this.value)" class="text-xs border border-pink-200 rounded-lg p-1 bg-white/50 focus:outline-none text-pink-600 font-bold">
+                            <option value="theme-day">☀️ Day</option>
+                            <option value="theme-night">🌙 Night</option>
+                            <option value="theme-sunset">🌅 Sunset</option>
+                        </select>
+                    </div>
                     <!-- Settings Buttons -->
                     <div class="flex gap-2">
                         <button id="change-partner-btn" onclick="disconnectPartner()" class="hidden text-[10px] text-gray-400 hover:text-pink-500 underline transition">Change Partner</button>
@@ -505,6 +517,13 @@
         let isSignupMode = false;
         let isFirstLoad = true; // To prevent level up on refresh
         let lastProcessedHeartbeat = 0;
+        
+        // Ambient Sound State
+        let isAmbiencePlaying = false;
+        let ambienceGainNode = null;
+        let ambienceSource = null;
+        let birdInterval = null;
+        let currentAmbienceType = 'none';
 
         // --- GAME DATA ---
         const GAME_LEVELS = [
@@ -562,6 +581,7 @@
         const changePartnerBtn = document.getElementById('change-partner-btn');
         const logoutBtn = document.getElementById('logout-btn');
         const themeSelector = document.getElementById('theme-selector');
+        const ambienceSelector = document.getElementById('ambience-selector');
         
         // Auth UI Refs
         const authTitle = document.getElementById('auth-title');
@@ -693,6 +713,181 @@
                 playTone(100, 'triangle', 0.1, 0);
                 playTone(80, 'triangle', 0.15, 0.2);
             }
+        }
+        
+        // --- AMBIENT SOUND GENERATOR ---
+        
+        // Helpers
+        function createPinkNoise() {
+            const bufferSize = 2 * audioCtx.sampleRate;
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const output = buffer.getChannelData(0);
+            let b0, b1, b2, b3, b4, b5, b6;
+            b0 = b1 = b2 = b3 = b4 = b5 = b6 = 0.0;
+            for (let i = 0; i < bufferSize; i++) {
+                const white = Math.random() * 2 - 1;
+                b0 = 0.99886 * b0 + white * 0.0555179;
+                b1 = 0.99332 * b1 + white * 0.0750759;
+                b2 = 0.96900 * b2 + white * 0.1538520;
+                b3 = 0.86650 * b3 + white * 0.3104856;
+                b4 = 0.55000 * b4 + white * 0.5329522;
+                b5 = -0.7616 * b5 - white * 0.0168980;
+                output[i] = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362;
+                output[i] *= 0.11; 
+                b6 = white * 0.115926;
+            }
+            return buffer;
+        }
+
+        function playBirdChirp() {
+            if (!isAmbiencePlaying || currentAmbienceType !== 'birds') return;
+            const now = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            
+            // Randomize pitch and duration
+            const freq = 2000 + Math.random() * 1500;
+            const dur = 0.1 + Math.random() * 0.1;
+            
+            osc.frequency.setValueAtTime(freq, now);
+            // Slide pitch slightly
+            osc.frequency.linearRampToValueAtTime(freq - 500, now + dur);
+            
+            gain.gain.setValueAtTime(0, now);
+            gain.gain.linearRampToValueAtTime(0.05, now + 0.02);
+            gain.gain.linearRampToValueAtTime(0, now + dur);
+            
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(now);
+            osc.stop(now + dur);
+        }
+
+        // Logic
+        window.changeAmbience = function(type) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            
+            stopAmbience();
+            currentAmbienceType = type;
+            
+            if (type === 'none') {
+                isAmbiencePlaying = false;
+                return;
+            }
+            
+            isAmbiencePlaying = true;
+            
+            if (type === 'rain') startRain();
+            else if (type === 'ocean') startOcean();
+            else if (type === 'birds') startForest();
+        }
+        
+        function stopAmbience() {
+            if (ambienceGainNode) {
+                const node = ambienceGainNode;
+                const source = ambienceSource;
+                // Fade out
+                try {
+                    node.gain.cancelScheduledValues(audioCtx.currentTime);
+                    node.gain.setValueAtTime(node.gain.value, audioCtx.currentTime);
+                    node.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+                    setTimeout(() => {
+                        if (source) source.stop(); 
+                    }, 500);
+                } catch(e) {}
+            }
+            if (birdInterval) clearInterval(birdInterval);
+            ambienceGainNode = null;
+            ambienceSource = null;
+        }
+
+        function startRain() {
+            const bufferSize = 2 * audioCtx.sampleRate;
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const output = buffer.getChannelData(0);
+            let lastOut = 0;
+            for (let i = 0; i < bufferSize; i++) {
+                const white = Math.random() * 2 - 1;
+                output[i] = (lastOut + (0.02 * white)) / 1.02;
+                lastOut = output[i];
+                output[i] *= 3.5;
+            }
+
+            ambienceSource = audioCtx.createBufferSource();
+            ambienceSource.buffer = buffer;
+            ambienceSource.loop = true;
+
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.value = 800;
+
+            ambienceGainNode = audioCtx.createGain();
+            ambienceGainNode.gain.setValueAtTime(0.001, audioCtx.currentTime);
+            ambienceGainNode.gain.linearRampToValueAtTime(0.15, audioCtx.currentTime + 2);
+
+            ambienceSource.connect(filter);
+            filter.connect(ambienceGainNode);
+            ambienceGainNode.connect(audioCtx.destination);
+            ambienceSource.start();
+        }
+        
+        function startOcean() {
+            const buffer = createPinkNoise();
+            ambienceSource = audioCtx.createBufferSource();
+            ambienceSource.buffer = buffer;
+            ambienceSource.loop = true;
+            
+            // Ocean needs lowpass modulation
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.value = 400;
+            
+            // LFO for waves
+            const lfo = audioCtx.createOscillator();
+            lfo.type = 'sine';
+            lfo.frequency.value = 0.15; // Slow waves
+            
+            const lfoGain = audioCtx.createGain();
+            lfoGain.gain.value = 300; // Modulate freq by +/- 300
+            
+            lfo.connect(lfoGain);
+            lfoGain.connect(filter.frequency);
+            lfo.start();
+            
+            ambienceGainNode = audioCtx.createGain();
+            ambienceGainNode.gain.setValueAtTime(0.001, audioCtx.currentTime);
+            ambienceGainNode.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 3);
+            
+            ambienceSource.connect(filter);
+            filter.connect(ambienceGainNode);
+            ambienceGainNode.connect(audioCtx.destination);
+            ambienceSource.start();
+        }
+        
+        function startForest() {
+            // Wind base (soft pink noise)
+            const buffer = createPinkNoise();
+            ambienceSource = audioCtx.createBufferSource();
+            ambienceSource.buffer = buffer;
+            ambienceSource.loop = true;
+            
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.value = 300;
+            
+            ambienceGainNode = audioCtx.createGain();
+            ambienceGainNode.gain.setValueAtTime(0.001, audioCtx.currentTime);
+            ambienceGainNode.gain.linearRampToValueAtTime(0.08, audioCtx.currentTime + 2);
+            
+            ambienceSource.connect(filter);
+            filter.connect(ambienceGainNode);
+            ambienceGainNode.connect(audioCtx.destination);
+            ambienceSource.start();
+            
+            // Start bird intervals
+            birdInterval = setInterval(() => {
+                if (Math.random() > 0.6) playBirdChirp();
+            }, 3000);
         }
 
         // --- INITIALIZATION ---
