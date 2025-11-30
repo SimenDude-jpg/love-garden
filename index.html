@@ -217,8 +217,8 @@
             <!-- GARDEN TAB (Organic Layout) -->
             <div id="tab-garden-content" class="absolute inset-0">
                 
-                <!-- PROGRESS BAR WIDGET -->
-                <div class="absolute top-2 w-full px-6 z-10">
+                <!-- PROGRESS BAR WIDGET (Top Left) -->
+                <div class="absolute top-2 left-4 right-16 z-10">
                     <div class="bg-white/30 backdrop-blur-md border border-white/40 rounded-xl p-2 shadow-sm">
                         <div class="flex justify-between text-[10px] font-bold text-gray-700 mb-1 px-1">
                             <span id="current-level-name">Level 1</span>
@@ -229,6 +229,12 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- WATER BUTTON (Top Right) -->
+                <button id="water-btn" onclick="waterGarden()" class="absolute top-2 right-4 z-10 w-10 h-10 rounded-full bg-blue-100 border-2 border-white text-blue-500 flex items-center justify-center hover:bg-blue-200 transition disabled:opacity-50 disabled:cursor-not-allowed shadow-md juicy-btn" title="Water Garden (+10 Flowers)">
+                    💧
+                    <span id="water-badge" class="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-ping hidden"></span>
+                </button>
 
                 <!-- Sky decorations (purchased) -->
                 <div id="sky-layer" class="absolute top-20 w-full flex justify-center gap-4 z-0 pointer-events-none opacity-80"></div>
@@ -410,7 +416,10 @@
                 // Progress Refs
                 progressBar: document.getElementById('progress-bar'),
                 currentLevelName: document.getElementById('current-level-name'),
-                nextUnlockText: document.getElementById('next-unlock-text')
+                nextUnlockText: document.getElementById('next-unlock-text'),
+                // Water
+                waterBtn: document.getElementById('water-btn'),
+                waterBadge: document.getElementById('water-badge')
             };
 
             try {
@@ -537,6 +546,8 @@
                 els.gift.classList.remove('hidden');
                 playSound('receive');
                 triggerSystemNotification("New Flower! 🌸", data.note || "Someone planted a flower for you!");
+                // Check if shiny
+                if (data.isShiny) flashStatus("GOLDEN FLOWER! (+5 Petals) ✨");
             }
             lastFlowerCount = count;
 
@@ -561,6 +572,7 @@
 
             checkDaily(data);
             updateProgress(count);
+            checkWaterStatus(data.lastWatered);
         }
         
         function updateProgress(count) {
@@ -669,6 +681,45 @@
         }
 
         // --- ACTIONS ---
+        
+        window.waterGarden = async function() {
+            if (!partnerId) return;
+            playSound('water');
+            
+            const pairId = [myId, partnerId].sort().join('_');
+            const docRef = doc(db, collectionPath, pairId);
+            
+            try {
+                const snap = await getDoc(docRef);
+                let count = snap.exists() ? (snap.data().count || 0) : 0;
+                
+                await setDoc(docRef, {
+                    count: count + 10,
+                    lastWatered: Date.now(),
+                    lastWaterer: myId,
+                    lastAction: 'water'
+                }, { merge: true });
+                
+                els.waterBtn.disabled = true;
+                els.waterBadge.classList.add('hidden');
+                flashStatus("Garden watered! (+10 Flowers)");
+            } catch(e) { console.error(e); }
+        }
+
+        function checkWaterStatus(lastWateredTimestamp) {
+            const now = Date.now();
+            const last = lastWateredTimestamp || 0;
+            const hoursPassed = (now - last) / (1000 * 60 * 60);
+            
+            if (hoursPassed >= 20) {
+                els.waterBtn.disabled = false;
+                els.waterBadge.classList.remove('hidden');
+            } else {
+                els.waterBtn.disabled = true;
+                els.waterBadge.classList.add('hidden');
+            }
+        }
+        
         window.sendFlower = async () => {
             if (!partnerId) return;
             const pairId = [myId, partnerId].sort().join('_');
@@ -681,21 +732,28 @@
                 let currentHistory = snap.exists() ? (snap.data().messageHistory || []) : [];
                 let count = snap.exists() ? (snap.data().count || 0) : 0;
                 
+                // Shiny Logic
+                const isShiny = Math.random() < 0.05;
+                const bonus = isShiny ? 5 : 1;
+                
                 const flower = ['🌸', '🌹', '🌻'][Math.floor(Math.random()*3)];
                 const msg = { sender: myId, note, flower, timestamp: Date.now() };
                 currentHistory.unshift(msg);
                 if(currentHistory.length > 20) currentHistory.pop();
 
+                if (isShiny) playSound('shiny');
+
                 await setDoc(docRef, {
-                    count: count + 1,
+                    count: count + bonus,
                     sender: myId,
                     note: note,
+                    isShiny: isShiny,
                     messageHistory: currentHistory,
                     timestamp: Date.now()
                 }, { merge: true });
                 
                 els.note.value = '';
-                flashStatus("Flower planted!");
+                flashStatus(isShiny ? "GOLDEN FLOWER! (+5)" : "Flower planted!");
                 startConfetti(); 
             } catch(e) { alert("Error sending"); }
         };
@@ -842,6 +900,8 @@
             }
             else if (type === 'levelup') { freq=880; }
             else if (type === 'buy') { freq=600; dur=0.1; osc.type='square'; }
+            else if (type === 'shiny') { freq=1100; dur=0.4; osc.type='sine'; }
+            else if (type === 'water') { freq=300; dur=0.6; osc.type='triangle'; }
 
             osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
             gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
