@@ -69,14 +69,19 @@
         }
         .flower-sprite {
             position: absolute; bottom: 0; 
-            transition: all 0.5s ease;
             filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
             font-size: 2rem;
             transform-origin: bottom center;
-            animation: growFlower 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            /* Animation combines growing and swaying */
+            animation: growFlower 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards, 
+                       swayFlower 3s ease-in-out infinite alternate;
             z-index: 10;
         }
-        @keyframes growFlower { from { transform: scale(0); } to { transform: scale(1); } }
+        @keyframes growFlower { from { transform: scale(0); } to { transform: scale(var(--scale)); } }
+        @keyframes swayFlower {
+            0% { transform: rotate(-5deg) scale(var(--scale)); }
+            100% { transform: rotate(5deg) scale(var(--scale)); }
+        }
 
         /* --- UI COMPONENTS --- */
         .glass-panel {
@@ -601,8 +606,14 @@
         // --- RENDERING ---
         function renderOrganicGarden(count) {
             els.garden.innerHTML = '<div class="ground-overlay"></div>';
-            const visualCount = Math.min(count, 50);
+            const visualCount = Math.min(count, 150); // Increased from 50 to 150
             
+            // Get list of currently unlocked flower emojis
+            const unlockedFlowers = GAME_LEVELS.filter(level => count >= level.count).map(l => l.emoji);
+            
+            // Fallback if count is 0 or something weird
+            const availableFlowers = unlockedFlowers.length > 0 ? unlockedFlowers : ['🌸'];
+
             for(let i=0; i<visualCount; i++) {
                 const el = document.createElement('div');
                 el.className = 'flower-sprite';
@@ -610,12 +621,13 @@
                 const bottom = ((i * 50) % 40) + 25; 
                 
                 const scale = 0.8 + ((i % 5)/10);
-                const flowers = ['🌸', '🌹', '🌻', '🌷', '🌺', '🌼'];
-                const emoji = flowers[i % flowers.length];
+                // Pick random from UNLOCKED flowers
+                const emoji = availableFlowers[i % availableFlowers.length];
                 
                 el.style.left = `${left}%`;
                 el.style.bottom = `${bottom}%`;
-                el.style.transform = `scale(${scale})`;
+                // Use CSS var for sway animation
+                el.style.setProperty('--scale', scale);
                 el.style.animationDelay = `${i * 0.05}s`;
                 el.innerText = emoji;
                 els.garden.appendChild(el);
@@ -685,6 +697,7 @@
         window.waterGarden = async function() {
             if (!partnerId) return;
             playSound('water');
+            flashStatus("Garden watered! (+10 Flowers)");
             
             const pairId = [myId, partnerId].sort().join('_');
             const docRef = doc(db, collectionPath, pairId);
@@ -702,7 +715,6 @@
                 
                 els.waterBtn.disabled = true;
                 els.waterBadge.classList.add('hidden');
-                flashStatus("Garden watered! (+10 Flowers)");
             } catch(e) { console.error(e); }
         }
 
@@ -724,7 +736,11 @@
             if (!partnerId) return;
             const pairId = [myId, partnerId].sort().join('_');
             const note = els.note.value.trim();
+            
+            // Instant Feedback
             playSound('send');
+            flashStatus("Planting flower...");
+            startConfetti();
             
             try {
                 const docRef = doc(db, collectionPath, pairId);
@@ -735,8 +751,14 @@
                 // Shiny Logic
                 const isShiny = Math.random() < 0.05;
                 const bonus = isShiny ? 5 : 1;
+                if (isShiny) flashStatus("GOLDEN FLOWER! (+5) ✨");
+                else flashStatus("Flower planted! 🌸");
                 
-                const flower = ['🌸', '🌹', '🌻'][Math.floor(Math.random()*3)];
+                // Get unlocked flowers
+                const unlocked = GAME_LEVELS.filter(l => l.count <= count);
+                const randomItem = unlocked[Math.floor(Math.random() * unlocked.length)] || GAME_LEVELS[0];
+                const flower = randomItem.emoji;
+
                 const msg = { sender: myId, note, flower, timestamp: Date.now() };
                 currentHistory.unshift(msg);
                 if(currentHistory.length > 20) currentHistory.pop();
@@ -753,8 +775,7 @@
                 }, { merge: true });
                 
                 els.note.value = '';
-                flashStatus(isShiny ? "GOLDEN FLOWER! (+5)" : "Flower planted!");
-                startConfetti(); 
+                
             } catch(e) { alert("Error sending"); }
         };
 
