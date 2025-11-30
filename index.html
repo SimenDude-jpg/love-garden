@@ -50,12 +50,6 @@
         }
         @keyframes twinkle { 0%, 100% { opacity: 0.3; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.2); } }
 
-        .raindrop {
-            position: absolute; width: 2px; height: 15px; background: rgba(255,255,255,0.5);
-            animation: rainFall 0.7s linear infinite; pointer-events: none; z-index: 10;
-        }
-        @keyframes rainFall { from { transform: translateY(-20px); } to { transform: translateY(100vh); } }
-
         /* --- ORGANIC GARDEN --- */
         #garden-container {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -126,7 +120,6 @@
         #gift-overlay {
             position: fixed; inset: 0; z-index: 100;
             background: rgba(0,0,0,0.8);
-            /* Removed display:flex from here to allow 'hidden' class to work */
         }
         .gift-box { font-size: 5rem; cursor: pointer; animation: bounce 2s infinite; }
         @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }
@@ -148,7 +141,7 @@
 
     <!-- Background Layers -->
     <div id="bg-layer" class="absolute inset-0 overflow-hidden pointer-events-none">
-        <!-- Clouds/Stars/Rain injected here -->
+        <!-- Clouds/Stars injected here -->
     </div>
     
     <!-- Heartbeat & Confetti Layers -->
@@ -173,14 +166,13 @@
                 </div>
             </div>
             <div class="flex items-center gap-2">
-                <!-- Settings/Ambience Dropdown -->
-                <select id="ambience-selector" onchange="changeAmbience(this.value)" class="bg-white/20 border border-white/30 rounded-lg p-1 text-xs focus:outline-none backdrop-blur-sm">
-                    <option value="none">🔇 Off</option>
-                    <option value="rain">🌧️ Rain</option>
-                    <option value="birds">🐦 Forest</option>
-                    <option value="ocean">🌊 Ocean</option>
+                <!-- Theme Selector (Replaced Ambience) -->
+                <select id="theme-selector" onchange="changeTheme(this.value)" class="bg-white/20 border border-white/30 rounded-lg p-1 text-xs focus:outline-none backdrop-blur-sm">
+                    <option value="theme-day">☀️ Day</option>
+                    <option value="theme-night">🌙 Night</option>
+                    <option value="theme-sunset">🌅 Sunset</option>
                 </select>
-                <button onclick="disconnectPartner()" class="text-xs opacity-50 hover:opacity-100">⚙️</button>
+                <!-- Removed Disconnect/Logout Button -->
             </div>
         </div>
 
@@ -318,10 +310,8 @@
         // STATE
         let db, auth, myId, partnerId, unsubscribeListener;
         let petals = 0, inventory = [], lastProcessedHeartbeat = 0, lastFlowerCount = 0;
-        let isSignupMode = false, isAmbiencePlaying = false;
-        let audioCtx, ambienceGainNode, ambienceSource, birdInterval, currentAmbienceType = 'none';
-        
-        // DOM REFERENCES CONTAINER
+        let isSignupMode = false;
+        let audioCtx;
         let els = {}; 
 
         // DATA CONSTANTS
@@ -420,7 +410,6 @@
                 });
             } catch (e) { 
                 console.error(e);
-                // Fallback if elements not found, though init called on load should be fine
             }
         }
 
@@ -453,12 +442,6 @@
             }
         };
 
-        window.handleLogout = async () => {
-            await signOut(auth);
-            localStorage.removeItem('flower_partner_id');
-            location.reload();
-        };
-
         window.copyMyId = () => {
             navigator.clipboard.writeText(myId);
             alert("ID Copied!");
@@ -470,11 +453,6 @@
             localStorage.setItem('flower_partner_id', pid);
             partnerId = pid;
             showGame();
-        };
-
-        window.disconnectPartner = () => {
-            localStorage.removeItem('flower_partner_id');
-            location.reload();
         };
 
         // --- GAME LOGIC ---
@@ -497,8 +475,6 @@
             const count = data.count || 0;
             
             if (count > lastFlowerCount && lastFlowerCount !== 0 && data.sender !== myId) {
-                // Ensure hidden class is cleared if previously set, but the parent flex controls visibility
-                // With the new CSS fix, adding/removing 'hidden' will correctly toggle visibility
                 els.gift.classList.remove('hidden');
                 playSound('receive');
             }
@@ -533,11 +509,7 @@
             for(let i=0; i<visualCount; i++) {
                 const el = document.createElement('div');
                 el.className = 'flower-sprite';
-                // Pseudo-random distribution based on index to keep consistent across re-renders
                 const left = ((i * 137.5) % 90) + 5; 
-                
-                // Lift flowers UP: Start at 25% from bottom, spread to 65% height
-                // This clears the bottom UI area (approx 25-30% on mobile)
                 const bottom = ((i * 50) % 40) + 25; 
                 
                 const scale = 0.8 + ((i % 5)/10);
@@ -745,31 +717,6 @@
             }
         };
 
-        window.changeAmbience = (val) => {
-            if(audioCtx.state === 'suspended') audioCtx.resume();
-            stopAmbience();
-            isAmbiencePlaying = true;
-            if(val === 'rain') startRain();
-            else if(val === 'ocean') startOcean();
-            else if(val === 'birds') startForest();
-            else isAmbiencePlaying = false;
-            
-            // Visual rain
-            if (val === 'rain') {
-                for(let i=0; i<20; i++) {
-                    const r = document.createElement('div');
-                    r.className = 'raindrop';
-                    r.style.left = Math.random()*100 + '%';
-                    r.style.animationDuration = (0.5 + Math.random()*0.5) + 's';
-                    r.style.animationDelay = Math.random() + 's';
-                    els.bg.appendChild(r);
-                }
-            } else {
-                const drops = document.querySelectorAll('.raindrop');
-                drops.forEach(d => d.remove());
-            }
-        };
-
         // --- AUDIO HELPERS ---
         function playSound(type) {
             if(audioCtx.state === 'suspended') audioCtx.resume();
@@ -790,41 +737,6 @@
             gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
             osc.connect(gain); gain.connect(audioCtx.destination);
             osc.start(); osc.stop(audioCtx.currentTime + dur);
-        }
-
-        // --- AMBIENCE GENERATORS ---
-        function startRain() {
-            const buf = audioCtx.createBuffer(1, audioCtx.sampleRate*2, audioCtx.sampleRate);
-            const data = buf.getChannelData(0);
-            for(let i=0; i<data.length; i++) data[i] = (Math.random()*2-1)*0.2;
-            
-            ambienceSource = audioCtx.createBufferSource();
-            ambienceSource.buffer = buf;
-            ambienceSource.loop = true;
-            ambienceGainNode = audioCtx.createGain();
-            ambienceGainNode.gain.value = 0.15;
-            
-            const filter = audioCtx.createBiquadFilter();
-            filter.type = 'lowpass'; filter.frequency.value = 800;
-            
-            ambienceSource.connect(filter); filter.connect(ambienceGainNode);
-            ambienceGainNode.connect(audioCtx.destination);
-            ambienceSource.start();
-        }
-        
-        function startOcean() { /* Simplified pink noise logic */ 
-            startRain(); 
-        }
-        function startForest() { /* Reusing similar logic */ 
-            startRain(); 
-            birdInterval = setInterval(() => {
-                if(Math.random()>0.7) playSound('send'); 
-            }, 3000);
-        }
-        
-        function stopAmbience() {
-            if(ambienceSource) ambienceSource.stop();
-            if(birdInterval) clearInterval(birdInterval);
         }
 
         // Confetti Helper
