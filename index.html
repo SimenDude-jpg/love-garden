@@ -50,6 +50,12 @@
         }
         @keyframes twinkle { 0%, 100% { opacity: 0.3; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.2); } }
 
+        .raindrop {
+            position: absolute; width: 2px; height: 15px; background: rgba(255,255,255,0.5);
+            animation: rainFall 0.7s linear infinite; pointer-events: none; z-index: 10;
+        }
+        @keyframes rainFall { from { transform: translateY(-20px); } to { transform: translateY(100vh); } }
+
         /* --- ORGANIC GARDEN --- */
         #garden-container {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -166,13 +172,16 @@
                 </div>
             </div>
             <div class="flex items-center gap-2">
-                <!-- Theme Selector (Replaced Ambience) -->
+                <!-- Notifications Toggle -->
+                <button id="notify-btn" onclick="requestNotificationPermission()" class="hidden bg-white/20 border border-white/30 rounded-lg p-1 text-xs focus:outline-none backdrop-blur-sm" title="Enable Notifications">
+                    🔔
+                </button>
+                <!-- Theme Selector -->
                 <select id="theme-selector" onchange="changeTheme(this.value)" class="bg-white/20 border border-white/30 rounded-lg p-1 text-xs focus:outline-none backdrop-blur-sm">
                     <option value="theme-day">☀️ Day</option>
                     <option value="theme-night">🌙 Night</option>
                     <option value="theme-sunset">🌅 Sunset</option>
                 </select>
-                <!-- Removed Disconnect/Logout Button -->
             </div>
         </div>
 
@@ -219,7 +228,7 @@
                 <!-- Controls Container (Floating above bottom nav) -->
                 <div class="absolute bottom-24 w-full px-4 flex flex-col gap-2 z-20">
                     <!-- Status Bubble -->
-                    <div id="status-display" class="bg-white/70 backdrop-blur-sm rounded-2xl p-2 text-center text-xs shadow-sm min-h-[2.5rem] flex flex-col justify-center mx-4">
+                    <div id="status-display" class="bg-white/70 backdrop-blur-sm rounded-2xl p-2 text-center text-xs shadow-sm min-h-[2.5rem] flex flex-col justify-center mx-4 transition-opacity duration-1000">
                         Welcome to the garden!
                     </div>
                     
@@ -313,6 +322,7 @@
         let isSignupMode = false;
         let audioCtx;
         let els = {}; 
+        let statusTimer = null; // Timer for status messages
 
         // DATA CONSTANTS
         const SHOP_ITEMS = [
@@ -365,7 +375,9 @@
                 dailyStatus: document.getElementById('daily-status-msg'),
                 partnerAnsDisplay: document.getElementById('partner-answer-display'),
                 partnerAnsText: document.getElementById('partner-answer-text'),
-                dailyInputText: document.getElementById('daily-answer-input')
+                dailyInputText: document.getElementById('daily-answer-input'),
+                // Notification ref
+                notifyBtn: document.getElementById('notify-btn')
             };
 
             try {
@@ -378,6 +390,13 @@
                     const hour = new Date().getHours();
                     if (hour < 6 || hour > 19) window.changeTheme('theme-night');
                     else if (hour > 17) window.changeTheme('theme-sunset');
+                }
+                
+                // Check notification permission
+                if (Notification.permission === "granted" || Notification.permission === "denied") {
+                    els.notifyBtn.classList.add('hidden');
+                } else {
+                    els.notifyBtn.classList.remove('hidden');
                 }
 
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -417,6 +436,13 @@
             els.conn.classList.add('hidden');
             els.game.classList.remove('hidden');
             els.nav.classList.remove('hidden');
+            
+            // Fade out welcome message after 3s
+            if(statusTimer) clearTimeout(statusTimer);
+            statusTimer = setTimeout(() => {
+                els.status.classList.add('opacity-0');
+            }, 3000);
+
             renderShop();
             setupListener();
         }
@@ -466,7 +492,7 @@
                     const data = snap.data();
                     updateUI(data);
                 } else {
-                    els.status.textContent = "New garden created! Plant the first seed.";
+                    flashStatus("New garden created! Plant the first seed.");
                 }
             });
         }
@@ -477,6 +503,7 @@
             if (count > lastFlowerCount && lastFlowerCount !== 0 && data.sender !== myId) {
                 els.gift.classList.remove('hidden');
                 playSound('receive');
+                triggerSystemNotification("New Flower! 🌸", data.note || "Someone planted a flower for you!");
             }
             lastFlowerCount = count;
 
@@ -493,6 +520,7 @@
                 if (data.heartbeatSender !== myId && (Date.now() - data.lastHeartbeat < 3000)) {
                     playSound('heartbeat');
                     els.heartbeat.classList.add('pulse-active');
+                    triggerSystemNotification("❤️ Heartbeat", "Your partner is thinking of you.");
                     setTimeout(() => els.heartbeat.classList.remove('pulse-active'), 2000);
                 }
                 lastProcessedHeartbeat = data.lastHeartbeat;
@@ -557,6 +585,32 @@
             });
         }
 
+        // --- HELPER ---
+        window.flashStatus = (msg) => {
+            els.status.textContent = msg;
+            els.status.classList.remove('opacity-0');
+            if(statusTimer) clearTimeout(statusTimer);
+            statusTimer = setTimeout(() => {
+                els.status.classList.add('opacity-0');
+            }, 3000);
+        }
+
+        // --- NOTIFICATIONS ---
+        window.requestNotificationPermission = async () => {
+            if (!("Notification" in window)) return alert("Browser does not support notifications");
+            const permission = await Notification.requestPermission();
+            if (permission === "granted") {
+                els.notifyBtn.classList.add('hidden');
+                new Notification("Notifications Enabled! 🔔", { body: "You'll know when love arrives.", icon: "icon.png" });
+            }
+        };
+
+        function triggerSystemNotification(title, body) {
+            if (document.visibilityState === 'hidden' && Notification.permission === "granted") {
+                new Notification(title, { body: body, icon: "icon.png" });
+            }
+        }
+
         // --- ACTIONS ---
         window.sendFlower = async () => {
             if (!partnerId) return;
@@ -584,7 +638,7 @@
                 }, { merge: true });
                 
                 els.note.value = '';
-                els.status.textContent = "Flower planted!";
+                flashStatus("Flower planted!");
                 startConfetti(); 
             } catch(e) { alert("Error sending"); }
         };
