@@ -58,14 +58,14 @@
 
         /* --- ORGANIC GARDEN --- */
         #garden-container {
-            position: relative; width: 100%; height: 60vh;
-            overflow: hidden; z-index: 10;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            overflow: hidden; z-index: 0; /* Behind UI */
         }
         /* The grass floor */
         .ground-overlay {
-            position: absolute; bottom: 0; left: 0; width: 100%; height: 30%;
-            background: linear-gradient(to top, rgba(20, 83, 45, 0.4), transparent);
-            pointer-events: none; z-index: 5;
+            position: absolute; bottom: 0; left: 0; width: 100%; height: 40%;
+            background: linear-gradient(to top, rgba(20, 83, 45, 0.5), transparent);
+            pointer-events: none; z-index: 0;
         }
         .flower-sprite {
             position: absolute; bottom: 0; 
@@ -74,6 +74,7 @@
             font-size: 2rem;
             transform-origin: bottom center;
             animation: growFlower 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            z-index: 10;
         }
         @keyframes growFlower { from { transform: scale(0); } to { transform: scale(1); } }
 
@@ -92,7 +93,7 @@
             position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
             width: 90%; max-width: 400px;
             display: flex; justify-content: space-around;
-            padding: 12px; border-radius: 24px;
+            padding: 10px; border-radius: 24px;
             z-index: 50;
         }
         .nav-btn {
@@ -164,7 +165,7 @@
     <div id="app-container" class="relative z-10 flex flex-col h-full min-h-screen">
         
         <!-- Header -->
-        <div class="flex justify-between items-center p-4 pt-8 glass-panel rounded-b-3xl mx-2 mt-2">
+        <div class="flex justify-between items-center p-4 pt-8 glass-panel rounded-b-3xl mx-2 mt-2 z-50">
             <div>
                 <h1 class="text-2xl font-extrabold tracking-tight">Love Garden</h1>
                 <div class="flex items-center gap-2 text-xs opacity-70">
@@ -184,7 +185,7 @@
         </div>
 
         <!-- AUTH SCREEN -->
-        <div id="view-auth" class="hidden flex-grow flex flex-col items-center justify-center p-6">
+        <div id="view-auth" class="hidden flex-grow flex flex-col items-center justify-center p-6 z-50 relative">
             <div class="glass-panel p-8 rounded-3xl w-full max-w-sm text-center">
                 <h2 id="auth-title" class="text-2xl font-bold mb-6 text-pink-500">Welcome</h2>
                 <input type="email" id="auth-email" placeholder="Email" class="w-full p-4 mb-3 rounded-2xl bg-white/50 border-none focus:ring-2 focus:ring-pink-400 outline-none text-gray-800">
@@ -198,7 +199,7 @@
         </div>
 
         <!-- CONNECTION SCREEN -->
-        <div id="view-connection" class="hidden flex-grow flex flex-col items-center justify-center p-6">
+        <div id="view-connection" class="hidden flex-grow flex flex-col items-center justify-center p-6 z-50 relative">
             <div class="glass-panel p-8 rounded-3xl w-full max-w-sm text-center">
                 <h2 class="text-xl font-bold mb-2">Connect Partners</h2>
                 <div class="bg-white/40 p-3 rounded-xl mb-4 text-xs font-mono break-all select-all" id="my-id">...</div>
@@ -224,25 +225,25 @@
                 </div>
 
                 <!-- Controls Container (Floating above bottom nav) -->
-                <div class="absolute bottom-24 w-full px-6 flex flex-col gap-3 z-20">
+                <div class="absolute bottom-24 w-full px-4 flex flex-col gap-2 z-20">
                     <!-- Status Bubble -->
-                    <div id="status-display" class="bg-white/80 backdrop-blur-md rounded-2xl p-3 text-center text-xs shadow-sm min-h-[3rem] flex flex-col justify-center">
+                    <div id="status-display" class="bg-white/70 backdrop-blur-sm rounded-2xl p-2 text-center text-xs shadow-sm min-h-[2.5rem] flex flex-col justify-center mx-4">
                         Welcome to the garden!
                     </div>
                     
                     <!-- Input & Actions -->
                     <div class="flex gap-2">
-                        <input type="text" id="love-note" placeholder="Write a note..." class="flex-grow p-4 rounded-2xl bg-white/90 border-none shadow-sm focus:ring-2 focus:ring-pink-300 outline-none">
-                        <button onclick="sendHeartbeat()" class="w-14 bg-red-100 text-red-500 rounded-2xl shadow-md juicy-btn flex items-center justify-center text-xl">❤️</button>
+                        <input type="text" id="love-note" placeholder="Write a note..." class="flex-grow p-3 rounded-2xl bg-white/80 border-none shadow-sm focus:ring-2 focus:ring-pink-300 outline-none text-sm">
+                        <button onclick="sendHeartbeat()" class="w-12 bg-red-100 text-red-500 rounded-2xl shadow-md juicy-btn flex items-center justify-center text-lg">❤️</button>
                     </div>
-                    <button onclick="sendFlower()" class="w-full py-4 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-2xl font-bold shadow-lg juicy-btn">
+                    <button onclick="sendFlower()" class="w-full py-3 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-2xl font-bold shadow-lg juicy-btn text-sm">
                         Plant Flower 🌸
                     </button>
                 </div>
             </div>
 
             <!-- MEMORY TAB -->
-            <div id="tab-memory-content" class="hidden absolute inset-0 p-4 overflow-y-auto pb-32">
+            <div id="tab-memory-content" class="hidden absolute inset-0 p-4 overflow-y-auto pb-32 pt-24 z-20">
                 <h3 class="text-center font-bold opacity-50 mb-4 uppercase tracking-widest text-xs">Memory Wall</h3>
                 <div id="memory-wall" class="flex flex-col items-center">
                     <!-- Polaroids injected here -->
@@ -250,13 +251,13 @@
             </div>
 
             <!-- SHOP TAB -->
-            <div id="tab-shop-content" class="hidden absolute inset-0 p-4 overflow-y-auto pb-32">
+            <div id="tab-shop-content" class="hidden absolute inset-0 p-4 overflow-y-auto pb-32 pt-24 z-20">
                 <h3 class="text-center font-bold opacity-50 mb-4 uppercase tracking-widest text-xs">Garden Shop</h3>
                 <div id="shop-grid" class="grid grid-cols-2 gap-4"></div>
             </div>
 
             <!-- DAILY TAB -->
-            <div id="tab-daily-content" class="hidden absolute inset-0 p-6 flex flex-col items-center justify-center">
+            <div id="tab-daily-content" class="hidden absolute inset-0 p-6 flex flex-col items-center justify-center z-20">
                 <div class="glass-panel p-6 rounded-3xl w-full text-center">
                     <div class="inline-block bg-pink-100 text-pink-600 px-3 py-1 rounded-full text-xs font-bold mb-4">Daily Question</div>
                     <h3 id="daily-question-text" class="text-lg font-bold mb-6">Loading...</h3>
@@ -299,7 +300,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, onSnapshot, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, onSnapshot, setDoc, getDoc, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // CONFIGURATION
         const manualConfig = {
@@ -532,8 +533,13 @@
             for(let i=0; i<visualCount; i++) {
                 const el = document.createElement('div');
                 el.className = 'flower-sprite';
+                // Pseudo-random distribution based on index to keep consistent across re-renders
                 const left = ((i * 137.5) % 90) + 5; 
-                const bottom = ((i * 50) % 25) + 2; 
+                
+                // Lift flowers UP: Start at 25% from bottom, spread to 65% height
+                // This clears the bottom UI area (approx 25-30% on mobile)
+                const bottom = ((i * 50) % 40) + 25; 
+                
                 const scale = 0.8 + ((i % 5)/10);
                 const flowers = ['🌸', '🌹', '🌻', '🌷', '🌺', '🌼'];
                 const emoji = flowers[i % flowers.length];
